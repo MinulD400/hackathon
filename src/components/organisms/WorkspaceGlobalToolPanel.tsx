@@ -32,6 +32,7 @@ export interface WorkspaceGlobalToolPanelProps {
   viewerSettings: UseViewerSettingsResult;
   objects: WorkspaceObject[];
   selectedObject: WorkspaceObject | null;
+  onOpenAiAssistant?: () => void;
 }
 
 /**
@@ -55,12 +56,37 @@ export function WorkspaceGlobalToolPanel({
   viewerSettings,
   objects,
   selectedObject,
+  onOpenAiAssistant,
 }: WorkspaceGlobalToolPanelProps) {
   return (
     <>
       <AccordionSection title="Shapes" expanded={expanded.shapes} onToggle={() => onToggleSection("shapes")}>
         <WorkspaceShapePanel onAddPrimitive={onAddPrimitive} />
         <WorkspaceAddLightControl onAddLight={onAddLight} />
+        {onOpenAiAssistant && (
+          <button
+            onClick={onOpenAiAssistant}
+            className="mt-3 w-full rounded-md bg-gradient-to-r from-purple-600 to-blue-600 px-3 py-2 text-sm font-medium text-white hover:from-purple-700 hover:to-blue-700 transition-colors"
+            title="Find a real 3D model with AI"
+          >
+            ✨ Find Model with AI
+          </button>
+        )}
+        {onOpenAiAssistant && (
+          // Poly Haven's API terms require the asset source to be credited
+          // visibly to end users wherever the live API is used.
+          <p className="mt-2 text-center text-[11px] text-gray-500">
+            CC0 models from{" "}
+            <a
+              href="https://polyhaven.com"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="underline hover:text-gray-700"
+            >
+              Poly Haven
+            </a>
+          </p>
+        )}
       </AccordionSection>
       <AccordionSection title="Snapping" expanded={expanded.snapping} onToggle={() => onToggleSection("snapping")}>
         <WorkspaceSnappingPanel

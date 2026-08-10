@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.16.0",
     "@gradio/client": "^2.4.0",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",

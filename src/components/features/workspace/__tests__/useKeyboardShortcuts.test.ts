@@ -11,6 +11,7 @@ describe("useKeyboardShortcuts", () => {
     importErrors: [],
     importFiles: vi.fn(),
     importFromHistory: vi.fn(),
+    importLibraryAsset: vi.fn(),
     select: vi.fn(),
     updateTransform: vi.fn(),
     remove: vi.fn(),

@@ -14,6 +14,8 @@ import path from "node:path";
  * - `MAX_UPLOAD_BYTES`   (optional, default: 20971520 = 20 MB)
  * - `SQLITE_DB_PATH`     (optional, default: "data/db/image2glb.sqlite")
  * - `GLB_STORAGE_ROOT`   (optional, default: "data/glb-storage")
+ * - `POLY_PIZZA_API_KEY` (optional, no default — Poly Pizza is skipped as an asset source
+ *                         when unset, and the search falls back to Poly Haven alone)
  */
 export interface ServerConfig {
   hfSpaceId: string;
@@ -22,6 +24,10 @@ export interface ServerConfig {
   maxUploadBytes: number;
   sqliteFilePath: string;
   glbStorageRoot: string;
+  /** Optional. When unset, `PolyPizzaLibraryProvider` is not added to the asset-search
+   * provider list — this is the only field with no default value, because "absent" is
+   * itself the documented, correct behaviour. */
+  polyPizzaApiKey?: string;
 }
 
 const DEFAULT_HF_SPACE_ID = "https://microsoft-trellis-2.hf.space";
@@ -57,6 +63,7 @@ export function getServerConfig(): ServerConfig {
     maxUploadBytes: parsePositiveInt(process.env.MAX_UPLOAD_BYTES, DEFAULT_MAX_UPLOAD_BYTES),
     sqliteFilePath: process.env.SQLITE_DB_PATH?.trim() || DEFAULT_SQLITE_RELATIVE_PATH,
     glbStorageRoot: process.env.GLB_STORAGE_ROOT?.trim() || DEFAULT_GLB_STORAGE_RELATIVE_ROOT,
+    polyPizzaApiKey: process.env.POLY_PIZZA_API_KEY?.trim() || undefined,
   };
 
   return cachedConfig;

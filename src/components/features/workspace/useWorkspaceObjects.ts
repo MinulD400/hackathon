@@ -12,12 +12,25 @@ import type {
 } from "@/components/shared/types/workspaceObject";
 import { IDENTITY_TRANSFORM } from "@/components/shared/types/workspaceObject";
 
+/** A Poly Haven model resolved to something importable. */
+export interface LibraryAssetImport {
+  assetId: string;
+  name: string;
+  /** Same-origin glTF URL (see `/api/assets/[id]/gltf`). */
+  url: string;
+  /** Uniform scale that brings the model to a sensible size in the scene. */
+  scale: number;
+  authors: Record<string, string>;
+}
+
 export interface UseWorkspaceObjectsResult {
   objects: WorkspaceObject[];
   selectedId: string | null;
   importErrors: ImportErrorView[];
   importFiles: (files: File[]) => Promise<void>;
   importFromHistory: (jobId: string, url: string, fileName: string) => void;
+  /** Adds a Poly Haven library model. Returns the new object's id. */
+  importLibraryAsset: (asset: LibraryAssetImport) => string;
   select: (id: string | null) => void;
   updateTransform: (id: string, transform: Transform) => void;
   remove: (id: string) => void;
@@ -110,6 +123,35 @@ export function useWorkspaceObjects(): UseWorkspaceObjectsResult {
 
     if (imported.length > 0) setObjects((prev) => [...prev, ...imported]);
     setImportErrors(errors);
+  }, []);
+
+  // Reads `objectsRef.current` for the same synchronous-id-availability
+  // reason `addPrimitive`/`duplicate` do — the AI assistant needs the new id
+  // back immediately to apply a normalising scale.
+  const importLibraryAsset = useCallback((asset: LibraryAssetImport) => {
+    const count = objectsRef.current.length;
+    const newId = crypto.randomUUID();
+    const newObject: WorkspaceObject = {
+      id: newId,
+      source: {
+        kind: "library",
+        assetId: asset.assetId,
+        fileName: asset.name,
+        authors: asset.authors,
+      },
+      url: asset.url,
+      name: asset.name,
+      transform: {
+        ...IDENTITY_TRANSFORM,
+        position: { x: (count % 4) * 1.5, y: 0, z: Math.floor(count / 4) * 1.5 },
+        scale: { x: asset.scale, y: asset.scale, z: asset.scale },
+      },
+      visible: true,
+      wireframe: false,
+    };
+    setObjects((prev) => [...prev, newObject]);
+    setSelectedId(newId);
+    return newId;
   }, []);
 
   const importFromHistory = useCallback((jobId: string, url: string, fileName: string) => {
@@ -248,6 +290,7 @@ export function useWorkspaceObjects(): UseWorkspaceObjectsResult {
     importErrors,
     importFiles,
     importFromHistory,
+    importLibraryAsset,
     select,
     updateTransform,
     remove,
