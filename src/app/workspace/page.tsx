@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccordionState } from "@/components/features/workspace/useAccordionState";
+import { useKeyboardShortcuts } from "@/components/features/workspace/useKeyboardShortcuts";
 import { useSnapConfig } from "@/components/features/workspace/useSnapConfig";
 import { useViewerSettings } from "@/components/features/workspace/useViewerSettings";
 import { useWorkspaceEditor } from "@/components/features/workspace/useWorkspaceEditor";
@@ -8,7 +9,6 @@ import { AccordionSection } from "@/components/molecules/AccordionSection";
 import { WorkspaceHistoryControls } from "@/components/molecules/WorkspaceHistoryControls";
 import { WorkspaceLightListItem } from "@/components/molecules/WorkspaceLightListItem";
 import { WorkspaceGlobalToolPanel } from "@/components/organisms/WorkspaceGlobalToolPanel";
-import { WorkspaceImportRibbon } from "@/components/organisms/WorkspaceImportRibbon";
 import { WorkspaceObjectList } from "@/components/organisms/WorkspaceObjectList";
 import { WorkspaceSelectionToolPanel } from "@/components/organisms/WorkspaceSelectionToolPanel";
 import { WorkspaceViewer } from "@/components/organisms/WorkspaceViewer";
@@ -28,12 +28,12 @@ import { WorkspaceTemplate } from "@/components/templates/WorkspaceTemplate";
  * state between the two beyond the navigation itself.
  */
 export default function WorkspacePage() {
+  const editor = useWorkspaceEditor();
   const {
     objects,
     selectedId,
     importErrors,
     importFiles,
-    importFromHistory,
     select,
     updateTransform,
     remove,
@@ -59,7 +59,7 @@ export default function WorkspacePage() {
     canRedo,
     undo,
     redo,
-  } = useWorkspaceEditor();
+  } = editor;
 
   const {
     snapConfig,
@@ -76,16 +76,12 @@ export default function WorkspacePage() {
 
   const selectedObject = objects.find((object) => object.id === selectedId) ?? null;
 
+  // Wire keyboard shortcuts (Delete, Ctrl+D, Ctrl+Z, Ctrl+Shift+Z)
+  useKeyboardShortcuts(editor);
+
   return (
     <WorkspaceTemplate
-      import={
-        <WorkspaceImportRibbon
-          importErrors={importErrors}
-          onFilesSelected={(files) => void importFiles(files)}
-          onDismissError={dismissImportError}
-          onImportFromHistory={importFromHistory}
-        />
-      }
+      import={null}
       viewer={
         <WorkspaceViewer
           objects={objects}
@@ -120,6 +116,7 @@ export default function WorkspacePage() {
           <AccordionSection title="Layers" expanded={expanded.objects} onToggle={() => toggle("objects")}>
             <WorkspaceObjectList
               objects={objects}
+              lights={lights}
               selectedId={selectedId}
               onSelect={select}
               onRemove={remove}
@@ -129,6 +126,9 @@ export default function WorkspacePage() {
               onSetWireframe={setWireframe}
               onResetTransform={resetTransform}
               onRename={rename}
+              importErrors={importErrors}
+              onFilesSelected={(files) => void importFiles(files)}
+              onDismissError={dismissImportError}
             />
             {lights.length > 0 && !selectedLightId ? (
               <ul className="flex flex-col gap-2">

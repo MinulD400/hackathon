@@ -2,9 +2,9 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from "react";
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
-import { Environment, Grid, OrbitControls, TransformControls, useGLTF } from "@react-three/drei";
+import { Billboard, Environment, Grid, Line, OrbitControls, TransformControls, useGLTF } from "@react-three/drei";
 import { Box3, TextureLoader, Vector3 } from "three";
-import type { DirectionalLight, Group, Object3D, PointLight, SpotLight } from "three";
+import type { DirectionalLight, Group, Mesh, Object3D, PointLight, SpotLight } from "three";
 
 import { createPrimitiveGeometry } from "@/components/features/workspace/primitiveGeometry";
 import type { ViewerSettings } from "@/components/features/workspace/useViewerSettings";
@@ -58,6 +58,59 @@ interface SceneLightProps {
  * one transformable node (T-9), matching `WorkspaceObjectMesh`'s
  * group-wrapping pattern. Not a separately exported component, matching
  * `WorkspaceObjectMesh`'s local precedent. */
+/** 8 rays radiating out from a center circle — the "sun" icon used by
+ * Blender/Maya/3DS Max for directional lights. Drawn flat (XY plane) inside
+ * a `Billboard` so it always faces the camera regardless of view angle. */
+function SunRays({ color, innerRadius, outerRadius }: { color: string; innerRadius: number; outerRadius: number }) {
+  const rays = useMemo(() => {
+    return Array.from({ length: 8 }, (_, i) => {
+      const angle = (i * Math.PI) / 4;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      return [
+        [cos * innerRadius, sin * innerRadius, 0],
+        [cos * outerRadius, sin * outerRadius, 0],
+      ] as [number, number, number][];
+    });
+  }, [innerRadius, outerRadius]);
+
+  return (
+    <>
+      {rays.map((points, i) => (
+        <Line key={`ray-${i}`} points={points} color={color} lineWidth={1.5} />
+      ))}
+    </>
+  );
+}
+
+/** Cone that visually points from the light's position at its target,
+ * matching Blender's spot-light beam gizmo. Rotated imperatively via
+ * `lookAt` (world-space target) rather than a static rotation prop, since
+ * the target can be anywhere relative to the light. */
+function SpotBeamCone({ target, color, isSelected }: { target: Vec3Tuple; color: string; isSelected: boolean }) {
+  const groupRef = useRef<Group>(null);
+
+  useEffect(() => {
+    groupRef.current?.lookAt(target.x, target.y, target.z);
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Cone geometry points +Y by default; rotating -90° on X makes its
+       * apex point along -Z, which is the direction `lookAt` aims the group. */}
+      <mesh rotation-x={-Math.PI / 2} position-z={-0.35}>
+        <coneGeometry args={[0.2, 0.7, 20, 1, true]} />
+        <meshBasicMaterial
+          color={isSelected ? "#facc15" : color}
+          wireframe
+          transparent
+          opacity={isSelected ? 0.9 : 0.55}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 function SceneLight({ light, isSelected, onSelect, registerRef }: SceneLightProps) {
   const lightRef = useRef<PointLight | SpotLight | DirectionalLight>(null);
   const targetRef = useRef<Object3D>(null);
@@ -80,6 +133,9 @@ function SceneLight({ light, isSelected, onSelect, registerRef }: SceneLightProp
     event.stopPropagation();
     onSelect?.();
   };
+
+  const iconColor = light.type === "point" ? "#fbbf24" : light.type === "spot" ? "#fb923c" : "#06b6d4";
+  const activeColor = isSelected ? "#facc15" : iconColor;
 
   return (
     <group ref={handleRef} position={[light.position.x, light.position.y, light.position.z]} onClick={handleClick}>
@@ -117,16 +173,69 @@ function SceneLight({ light, isSelected, onSelect, registerRef }: SceneLightProp
           />
         </>
       )}
-      {/* Always-rendered clickable proxy: raycasting only hits meshes with
-       * geometry, not light objects themselves, so without this a light
-       * could never be clicked/selected in the scene in the first place
-       * (previously this mesh only rendered once `isSelected` was already
-       * true, which is unreachable). Rendered at every light regardless of
-       * selection state, just styled differently when selected. */}
-      <mesh scale={0.15} onClick={handleClick}>
-        <sphereGeometry args={[1, 12, 12]} />
-        <meshBasicMaterial color={isSelected ? "#facc15" : light.color} wireframe={isSelected} transparent opacity={isSelected ? 1 : 0.85} />
-      </mesh>
+
+      {/* Blender-style light gizmos. The type badge itself is a flat 2D icon
+       * inside a `Billboard` so it always faces the camera and reads
+       * correctly from any angle (a plain 3D mesh distorts/foreshortens as
+       * the view rotates, which is what made point/sun icons look like
+       * blobs before). Spot additionally gets a real oriented cone showing
+       * the actual beam direction toward its target, matching Blender's
+       * spot-light viewport gizmo. */}
+      <Billboard onClick={handleClick}>
+        {light.type === "point" ? (
+          // Point: filled circle (omnidirectional — no direction to show)
+          <mesh>
+            <circleGeometry args={[0.12, 24]} />
+            <meshBasicMaterial color={activeColor} transparent opacity={isSelected ? 1 : 0.9} />
+          </mesh>
+        ) : light.type === "spot" ? (
+          // Spot: ring (hollow circle) — the real cone shows direction
+          <mesh>
+            <ringGeometry args={[0.09, 0.13, 24]} />
+            <meshBasicMaterial color={activeColor} transparent opacity={isSelected ? 1 : 0.9} side={2} />
+          </mesh>
+        ) : (
+          // Directional: sun — circle + 8 radiating rays
+          <>
+            <mesh>
+              <circleGeometry args={[0.09, 24]} />
+              <meshBasicMaterial color={activeColor} transparent opacity={isSelected ? 1 : 0.9} />
+            </mesh>
+            <SunRays color={activeColor} innerRadius={0.14} outerRadius={0.22} />
+          </>
+        )}
+      </Billboard>
+
+      {light.type === "spot" ? (
+        <SpotBeamCone
+          target={{
+            x: light.target.x - light.position.x,
+            y: light.target.y - light.position.y,
+            z: light.target.z - light.position.z,
+          }}
+          color={iconColor}
+          isSelected={isSelected}
+        />
+      ) : null}
+
+      {light.type === "spot" || light.type === "directional" ? (
+        <Line
+          points={[
+            [0, 0, 0],
+            [
+              light.target.x - light.position.x,
+              light.target.y - light.position.y,
+              light.target.z - light.position.z,
+            ],
+          ]}
+          color={activeColor}
+          lineWidth={1.5}
+          transparent
+          opacity={isSelected ? 0.8 : 0.35}
+          dashed
+          dashScale={8}
+        />
+      ) : null}
     </group>
   );
 }
@@ -177,6 +286,10 @@ interface MaterialOverrideProps {
   color?: string;
   textureDataUrl?: string;
   wireframe: boolean;
+  metalness?: number;
+  roughness?: number;
+  emissive?: string;
+  emissiveIntensity?: number;
 }
 
 function useOverrideTexture(textureDataUrl?: string) {
@@ -196,6 +309,10 @@ function WorkspacePrimitiveMesh({ object }: { object: WorkspaceObject; sceneWire
     color: object.material?.color ?? "#cccccc",
     wireframe: object.wireframe,
     textureDataUrl: object.material?.textureDataUrl,
+    metalness: object.material?.metalness,
+    roughness: object.material?.roughness,
+    emissive: object.material?.emissive,
+    emissiveIntensity: object.material?.emissiveIntensity,
   };
   return (
     <mesh castShadow receiveShadow geometry={geometry}>
@@ -210,6 +327,10 @@ function WorkspacePrimitiveMesh({ object }: { object: WorkspaceObject; sceneWire
         color={materialProps.color}
         wireframe={materialProps.wireframe}
         map={texture ?? undefined}
+        metalness={materialProps.metalness}
+        roughness={materialProps.roughness}
+        emissive={materialProps.emissive}
+        emissiveIntensity={materialProps.emissiveIntensity}
       />
     </mesh>
   );
@@ -227,6 +348,10 @@ interface OverridableMaterial {
   map?: unknown;
   wireframe?: boolean;
   needsUpdate?: boolean;
+  metalness?: number;
+  roughness?: number;
+  emissive?: { set: (value: string) => void };
+  emissiveIntensity?: number;
 }
 
 function WorkspaceGltfMesh({ object, sceneWireframe }: { object: WorkspaceObject; sceneWireframe: boolean }) {
@@ -250,8 +375,22 @@ function WorkspaceGltfMesh({ object, sceneWireframe }: { object: WorkspaceObject
         material.needsUpdate = true;
       }
       material.wireframe = wireframe;
+      // Apply PBR material properties
+      if (object.material?.metalness !== undefined) material.metalness = object.material.metalness;
+      if (object.material?.roughness !== undefined) material.roughness = object.material.roughness;
+      if (object.material?.emissive !== undefined) material.emissive?.set(object.material.emissive);
+      if (object.material?.emissiveIntensity !== undefined) material.emissiveIntensity = object.material.emissiveIntensity;
     });
-  }, [scene, object.material?.color, texture, wireframe]);
+  }, [
+    scene,
+    object.material?.color,
+    object.material?.metalness,
+    object.material?.roughness,
+    object.material?.emissive,
+    object.material?.emissiveIntensity,
+    texture,
+    wireframe,
+  ]);
 
   return <primitive object={scene} castShadow receiveShadow />;
 }

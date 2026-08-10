@@ -4,7 +4,9 @@
  * externally uploaded file, from an existing generation job's GLB, or from a
  * user-added primitive shape (FR-4/A-4), per `04-lld.md` §2.
  */
-export type PrimitiveShapeType = "cube" | "sphere" | "cylinder" | "plane" | "cone" | "torus";
+export type PrimitiveShapeType =
+  | "cube" | "sphere" | "cylinder" | "plane" | "cone" | "torus"
+  | "dodecahedron" | "tetrahedron" | "icosahedron" | "octahedron";
 
 export type WorkspaceObjectSource =
   | { kind: "upload"; fileName: string }
@@ -29,6 +31,14 @@ export interface WorkspaceObjectMaterial {
   color: string;
   /** `data:` URL produced by `FileReader.readAsDataURL` (A-7/FR-5/AC-10). */
   textureDataUrl?: string;
+  /** Metalness property for Three.js MeshStandardMaterial (0–1, optional). */
+  metalness?: number;
+  /** Roughness property for Three.js MeshStandardMaterial (0–1, optional). */
+  roughness?: number;
+  /** Emissive color as CSS hex (optional). */
+  emissive?: string;
+  /** Emissive intensity (0–10, optional). */
+  emissiveIntensity?: number;
 }
 
 export interface WorkspaceObject {

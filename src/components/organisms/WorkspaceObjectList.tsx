@@ -1,11 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/atoms/Button";
+import { LayerVisibilityControls } from "@/components/molecules/LayerVisibilityControls";
 import { WorkspaceObjectListItem } from "@/components/molecules/WorkspaceObjectListItem";
-import type { WorkspaceObject } from "@/components/shared/types/workspaceObject";
+import { WorkspaceImportModal } from "@/components/organisms/WorkspaceImportModal";
+import type { LightSource } from "@/components/shared/types/lightSource";
+import type { WorkspaceObject, ImportErrorView } from "@/components/shared/types/workspaceObject";
 
 export interface WorkspaceObjectListProps {
   objects: WorkspaceObject[];
+  lights: LightSource[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
@@ -15,6 +20,9 @@ export interface WorkspaceObjectListProps {
   onSetWireframe: (id: string, wireframe: boolean) => void;
   onResetTransform: (id: string) => void;
   onRename: (id: string, name: string) => void;
+  importErrors: ImportErrorView[];
+  onFilesSelected: (files: File[]) => void;
+  onDismissError: (id: string) => void;
 }
 
 /**
@@ -26,6 +34,7 @@ export interface WorkspaceObjectListProps {
  */
 export function WorkspaceObjectList({
   objects,
+  lights,
   selectedId,
   onSelect,
   onRemove,
@@ -35,27 +44,49 @@ export function WorkspaceObjectList({
   onSetWireframe,
   onResetTransform,
   onRename,
+  importErrors,
+  onFilesSelected,
+  onDismissError,
 }: WorkspaceObjectListProps) {
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
   return (
-    <section aria-labelledby="workspace-object-list-heading" className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <h2 id="workspace-object-list-heading" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Objects ({objects.length})
-        </h2>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={onClear}
-          disabled={objects.length === 0}
-        >
-          Clear workspace
-        </Button>
-      </div>
+    <>
+      <section aria-labelledby="workspace-object-list-heading" className="flex flex-col gap-2.5">
+        <LayerVisibilityControls objects={objects} lights={lights} onSetVisible={onSetVisible} />
+        <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-800/40">
+          <h2 id="workspace-object-list-heading" className="text-xs font-semibold text-zinc-300">
+            Objects ({objects.length})
+          </h2>
+          <div className="flex items-center gap-1.5">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsImportModalOpen(true)}
+              title="Import GLB files"
+              className="px-2 py-1 text-xs font-medium border-zinc-700 bg-zinc-800/80 hover:bg-zinc-700"
+            >
+              + Import
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onClear}
+              disabled={objects.length === 0}
+              className="px-2 py-1 text-xs font-medium border-zinc-700 bg-zinc-800/80 hover:bg-zinc-700 disabled:opacity-40"
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
       {objects.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">No objects imported yet.</p>
+        <p className="text-xs text-zinc-500 py-1 italic text-center border border-dashed border-zinc-800/60 rounded-md">
+          No objects in scene
+        </p>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-0.5">
           {objects.map((object) => (
             <WorkspaceObjectListItem
               key={object.id}
@@ -72,6 +103,16 @@ export function WorkspaceObjectList({
           ))}
         </ul>
       )}
-    </section>
+      </section>
+
+      <WorkspaceImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        importErrors={importErrors}
+        onFilesSelected={onFilesSelected}
+        onDismissError={onDismissError}
+      />
+    </>
   );
 }
+
