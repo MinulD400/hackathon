@@ -51,6 +51,11 @@ export interface UseWorkspaceEditorResult {
   canRedo: boolean;
   undo: () => void;
   redo: () => void;
+  /** Replaces the live scene with a loaded save's objects/lights, integrating
+   * with the same undo/redo history boundary every other mutating method
+   * uses (FR-9, AC-7/AC-10/AC-11) — a single `undo()` restores the pre-load
+   * scene. */
+  loadWorkspace: (objects: WorkspaceObject[], lights: LightSource[]) => void;
 }
 
 interface EditorSnapshot {
@@ -270,6 +275,15 @@ export function useWorkspaceEditor(): UseWorkspaceEditorResult {
     [workspaceObjects, lightingRig],
   );
 
+  const loadWorkspace = useCallback(
+    (objects: WorkspaceObject[], lights: LightSource[]) => {
+      recordSnapshot();
+      workspaceObjects.restoreObjects(objects);
+      lightingRig.restoreLights(lights);
+    },
+    [recordSnapshot, workspaceObjects, lightingRig],
+  );
+
   const undo = useCallback(() => {
     setHistory((prevHistory) => {
       if (prevHistory.length === 0) return prevHistory;
@@ -326,5 +340,6 @@ export function useWorkspaceEditor(): UseWorkspaceEditorResult {
     canRedo: future.length > 0,
     undo,
     redo,
+    loadWorkspace,
   };
 }

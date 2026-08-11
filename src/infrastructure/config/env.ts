@@ -16,6 +16,7 @@ import path from "node:path";
  * - `GLB_STORAGE_ROOT`   (optional, default: "data/glb-storage")
  * - `POLY_PIZZA_API_KEY` (optional, no default — Poly Pizza is skipped as an asset source
  *                         when unset, and the search falls back to Poly Haven alone)
+ * - `WORKSPACE_UPLOAD_STORAGE_ROOT` (optional, default: "data/workspace-uploads")
  */
 export interface ServerConfig {
   hfSpaceId: string;
@@ -28,6 +29,10 @@ export interface ServerConfig {
    * provider list — this is the only field with no default value, because "absent" is
    * itself the documented, correct behaviour. */
   polyPizzaApiKey?: string;
+  /** Root directory for saved-workspace upload object bytes (workspace-save
+   * feature, FR-2/AC-2) — a separate directory from `glbStorageRoot`, mirroring
+   * the separate aggregate/adapter (`WorkspaceUploadFileSystemStorage`). */
+  workspaceUploadStorageRoot: string;
 }
 
 const DEFAULT_HF_SPACE_ID = "https://microsoft-trellis-2.hf.space";
@@ -35,6 +40,7 @@ const DEFAULT_TRELLIS_TIMEOUT_MS = 180_000;
 const DEFAULT_MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 const DEFAULT_SQLITE_RELATIVE_PATH = path.join("data", "db", "image2glb.sqlite");
 const DEFAULT_GLB_STORAGE_RELATIVE_ROOT = path.join("data", "glb-storage");
+const DEFAULT_WORKSPACE_UPLOAD_STORAGE_RELATIVE_ROOT = path.join("data", "workspace-uploads");
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
@@ -64,6 +70,8 @@ export function getServerConfig(): ServerConfig {
     sqliteFilePath: process.env.SQLITE_DB_PATH?.trim() || DEFAULT_SQLITE_RELATIVE_PATH,
     glbStorageRoot: process.env.GLB_STORAGE_ROOT?.trim() || DEFAULT_GLB_STORAGE_RELATIVE_ROOT,
     polyPizzaApiKey: process.env.POLY_PIZZA_API_KEY?.trim() || undefined,
+    workspaceUploadStorageRoot:
+      process.env.WORKSPACE_UPLOAD_STORAGE_ROOT?.trim() || DEFAULT_WORKSPACE_UPLOAD_STORAGE_RELATIVE_ROOT,
   };
 
   return cachedConfig;

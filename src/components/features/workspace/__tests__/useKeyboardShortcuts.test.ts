@@ -37,6 +37,7 @@ describe("useKeyboardShortcuts", () => {
     canRedo: true,
     undo: vi.fn(),
     redo: vi.fn(),
+    loadWorkspace: vi.fn(),
     ...overrides,
   });
 

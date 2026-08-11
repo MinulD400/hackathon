@@ -11,6 +11,7 @@ import { WorkspaceHistoryControls } from "@/components/molecules/WorkspaceHistor
 import { WorkspaceLightListItem } from "@/components/molecules/WorkspaceLightListItem";
 import { WorkspaceGlobalToolPanel } from "@/components/organisms/WorkspaceGlobalToolPanel";
 import { WorkspaceObjectList } from "@/components/organisms/WorkspaceObjectList";
+import { WorkspaceSaveLoadPanel } from "@/components/organisms/WorkspaceSaveLoadPanel";
 import { WorkspaceSelectionToolPanel } from "@/components/organisms/WorkspaceSelectionToolPanel";
 import { WorkspaceViewer } from "@/components/organisms/WorkspaceViewer";
 import { ConversationModal } from "@/components/organisms/ConversationModal";
@@ -31,6 +32,11 @@ import { WorkspaceTemplate } from "@/components/templates/WorkspaceTemplate";
  */
 export default function WorkspacePage() {
   const [isConversationOpen, setIsConversationOpen] = useState(false);
+  // Local, session-only expand state for the new Save/Load section — not part
+  // of `useAccordionState`'s existing `SectionId` union (T-18's blast radius
+  // is additive-only; extending that shared type is out of scope for this
+  // plan). Defaults expanded, same convention as every other section.
+  const [isSaveLoadExpanded, setIsSaveLoadExpanded] = useState(true);
 
   const editor = useWorkspaceEditor();
   const {
@@ -152,6 +158,13 @@ export default function WorkspacePage() {
                   ))}
                 </ul>
               ) : null}
+            </AccordionSection>
+            <AccordionSection
+              title="Save/Load"
+              expanded={isSaveLoadExpanded}
+              onToggle={() => setIsSaveLoadExpanded((prev) => !prev)}
+            >
+              <WorkspaceSaveLoadPanel objects={objects} lights={lights} editor={editor} />
             </AccordionSection>
             {selectedId ? (
               <WorkspaceSelectionToolPanel
