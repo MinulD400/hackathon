@@ -15,26 +15,28 @@ describe("TopNav", () => {
     usePathnameMock.mockReturnValue("/");
     render(<TopNav />);
 
-    expect(screen.getByRole("link", { name: "Generate" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "Workspace" })).toHaveAttribute("href", "/workspace");
+    expect(screen.getByRole("link", { name: "OVERVIEW" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "3D CANVAS" })).toHaveAttribute("href", "/workspace");
   });
 
   it("marks the current route with aria-current (AC-1, AC-2)", () => {
     usePathnameMock.mockReturnValue("/workspace");
     render(<TopNav />);
 
-    expect(screen.getByRole("link", { name: "Workspace" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Generate" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "3D CANVAS" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "OVERVIEW" })).not.toHaveAttribute("aria-current");
   });
 
   it("is keyboard-reachable (NFR-4)", async () => {
     usePathnameMock.mockReturnValue("/");
     render(<TopNav />);
 
+    // First tab stop is the logo link (home), before the nav links.
     await userEvent.tab();
-    expect(screen.getByRole("link", { name: "Generate" })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole("link", { name: "OVERVIEW" })).toHaveFocus();
 
     await userEvent.tab();
-    expect(screen.getByRole("link", { name: "Workspace" })).toHaveFocus();
+    expect(screen.getByRole("link", { name: "3D GENERATOR" })).toHaveFocus();
   });
 });

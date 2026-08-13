@@ -85,6 +85,32 @@ async function buildExportGroup(objects: WorkspaceObject[]): Promise<Group> {
   return group;
 }
 
+/** Exports a `THREE.Group` as a single binary `.glb` `Blob` via
+ * `GLTFExporter`. Shared by the download flow below and by
+ * `useWorkspaceArExport`'s AR-upload flow — both need the exact same merge
+ * output, just handed to a different destination (a browser download vs. a
+ * POST body). */
+function exportGroupToBlob(group: Group): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const exporter = new GLTFExporter();
+    exporter.parse(
+      group,
+      (result) => resolve(new Blob([result as ArrayBuffer], { type: "model/gltf-binary" })),
+      () => reject(new Error("Export failed. Please try again.")),
+      { binary: true },
+    );
+  });
+}
+
+/** Merges every given workspace object into one `.glb` `Blob` at their
+ * current transforms (FR-12's underlying operation, factored out of
+ * `useWorkspaceExport` so `useWorkspaceArExport` can reuse it without
+ * duplicating the `GLTFExporter`/`buildExportGroup` logic). */
+export async function buildMergedGlbBlob(objects: WorkspaceObject[]): Promise<Blob> {
+  const group = await buildExportGroup(objects);
+  return exportGroupToBlob(group);
+}
+
 /**
  * Owns the workspace export feature's business/data logic (T-10): merges the
  * given workspace objects into one `THREE.Group` at their current transforms
@@ -97,23 +123,15 @@ export function useWorkspaceExport(): UseWorkspaceExportResult {
   const [error, setError] = useState<string | null>(null);
 
   const exportGroup = useCallback((group: Group, fileName: string): Promise<void> => {
-    return new Promise((resolve) => {
-      const exporter = new GLTFExporter();
-      exporter.parse(
-        group,
-        (result) => {
-          downloadGlb(result as ArrayBuffer, fileName);
-          setStatus("idle");
-          resolve();
-        },
-        () => {
-          setStatus("error");
-          setError("Export failed. Please try again.");
-          resolve();
-        },
-        { binary: true },
-      );
-    });
+    return exportGroupToBlob(group)
+      .then(async (blob) => {
+        downloadGlb(await blob.arrayBuffer(), fileName);
+        setStatus("idle");
+      })
+      .catch(() => {
+        setStatus("error");
+        setError("Export failed. Please try again.");
+      });
   }, []);
 
   const exportMerged = useCallback(

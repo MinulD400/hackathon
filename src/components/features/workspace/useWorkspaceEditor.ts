@@ -23,6 +23,9 @@ export interface UseWorkspaceEditorResult {
   importFromHistory: (jobId: string, url: string, fileName: string) => void;
   /** Adds a Poly Haven library model. Returns the new object's id. */
   importLibraryAsset: (asset: LibraryAssetImport) => string;
+  /** Re-points an existing library-sourced object at a freshly-picked asset
+   * ("Retry import" bugfix). See `useWorkspaceObjects.replaceObjectSource`. */
+  replaceObjectSource: (id: string, asset: LibraryAssetImport) => void;
   select: (id: string | null) => void;
   updateTransform: (id: string, transform: Transform) => void;
   remove: (id: string) => void;
@@ -124,6 +127,14 @@ export function useWorkspaceEditor(): UseWorkspaceEditorResult {
     (asset: LibraryAssetImport) => {
       recordSnapshot();
       return workspaceObjects.importLibraryAsset(asset);
+    },
+    [recordSnapshot, workspaceObjects],
+  );
+
+  const replaceObjectSource = useCallback(
+    (id: string, asset: LibraryAssetImport) => {
+      recordSnapshot();
+      workspaceObjects.replaceObjectSource(id, asset);
     },
     [recordSnapshot, workspaceObjects],
   );

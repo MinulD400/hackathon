@@ -1,16 +1,45 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from "react";
+import {
+  Component,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+  type ReactNode,
+} from "react";
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
-import { Billboard, Environment, Grid, Line, OrbitControls, TransformControls, useGLTF } from "@react-three/drei";
+import {
+  Billboard,
+  Environment,
+  Grid,
+  Line,
+  OrbitControls,
+  TransformControls,
+  useGLTF,
+} from "@react-three/drei";
 import { Box3, TextureLoader, Vector3 } from "three";
-import type { DirectionalLight, Group, Mesh, Object3D, PointLight, SpotLight } from "three";
+import type {
+  DirectionalLight,
+  Group,
+  Mesh,
+  Object3D,
+  PointLight,
+  SpotLight,
+} from "three";
 
 import { createPrimitiveGeometry } from "@/components/features/workspace/primitiveGeometry";
 import type { ViewerSettings } from "@/components/features/workspace/useViewerSettings";
 import type { LightSource } from "@/components/shared/types/lightSource";
 import type { SnapConfig } from "@/components/shared/types/snapConfig";
-import type { Transform, Vec3Tuple, WorkspaceObject } from "@/components/shared/types/workspaceObject";
+import type {
+  Transform,
+  Vec3Tuple,
+  WorkspaceObject,
+} from "@/components/shared/types/workspaceObject";
 
 export interface WorkspaceViewerProps {
   objects: WorkspaceObject[];
@@ -25,12 +54,47 @@ export interface WorkspaceViewerProps {
   onSelectLight?: (id: string | null) => void;
   /** FR-1/AC-2 — dragging a light's gizmo commits position (and, for
    * spot/directional lights, target moved by the same delta, per OQ-2). */
-  onLightTransformChange?: (id: string, patch: { position: Vec3Tuple; target?: Vec3Tuple }) => void;
+  onLightTransformChange?: (
+    id: string,
+    patch: { position: Vec3Tuple; target?: Vec3Tuple },
+  ) => void;
   /** FR-8/FR-9/FR-12 viewer display preferences, owned by `useViewerSettings`. */
   viewerSettings?: ViewerSettings;
 }
 
 type GizmoMode = "translate" | "rotate" | "scale";
+
+/**
+ * Catches a failed `drei` `<Environment>` HDR fetch (e.g. offline, CDN
+ * unreachable) and falls back to a flat color instead of crashing the whole
+ * `<Canvas>` — bugfix: an image-based-lighting preset (`studio`/`city`/
+ * `sunset`) throws a real, boundary-catchable error on fetch failure (not a
+ * Suspense-swallowed promise), so a network hiccup to that CDN took the
+ * entire viewer down every time one was selected. React error boundaries
+ * must be class components; not exported, matching this file's other
+ * local-only helper components (`SceneLight`).
+ */
+class EnvironmentErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error(
+      "[WorkspaceViewer] Environment preset failed to load, falling back to a flat background:",
+      error,
+    );
+  }
+
+  render() {
+    return this.state.hasError ? this.props.fallback : this.props.children;
+  }
+}
 
 const DEFAULT_VIEWER_SETTINGS: ViewerSettings = {
   sceneWireframe: false,
@@ -61,7 +125,11 @@ interface SceneLightProps {
 /** 8 rays radiating out from a center circle — the "sun" icon used by
  * Blender/Maya/3DS Max for directional lights. Drawn flat (XY plane) inside
  * a `Billboard` so it always faces the camera regardless of view angle. */
-function SunRays({ color, innerRadius, outerRadius }: { color: string; innerRadius: number; outerRadius: number }) {
+function SunRays({
+  color,
+  innerRadius,
+  outerRadius,
+}: Readonly<{ color: string; innerRadius: number; outerRadius: number }>) {
   const rays = useMemo(() => {
     return Array.from({ length: 8 }, (_, i) => {
       const angle = (i * Math.PI) / 4;
@@ -87,7 +155,15 @@ function SunRays({ color, innerRadius, outerRadius }: { color: string; innerRadi
  * matching Blender's spot-light beam gizmo. Rotated imperatively via
  * `lookAt` (world-space target) rather than a static rotation prop, since
  * the target can be anywhere relative to the light. */
-function SpotBeamCone({ target, color, isSelected }: { target: Vec3Tuple; color: string; isSelected: boolean }) {
+function SpotBeamCone({
+  target,
+  color,
+  isSelected,
+}: {
+  target: Vec3Tuple;
+  color: string;
+  isSelected: boolean;
+}) {
   const groupRef = useRef<Group>(null);
 
   useEffect(() => {
@@ -111,7 +187,12 @@ function SpotBeamCone({ target, color, isSelected }: { target: Vec3Tuple; color:
   );
 }
 
-function SceneLight({ light, isSelected, onSelect, registerRef }: SceneLightProps) {
+function SceneLight({
+  light,
+  isSelected,
+  onSelect,
+  registerRef,
+}: SceneLightProps) {
   const lightRef = useRef<PointLight | SpotLight | DirectionalLight>(null);
   const targetRef = useRef<Object3D>(null);
 
@@ -134,11 +215,20 @@ function SceneLight({ light, isSelected, onSelect, registerRef }: SceneLightProp
     onSelect?.();
   };
 
-  const iconColor = light.type === "point" ? "#fbbf24" : light.type === "spot" ? "#fb923c" : "#06b6d4";
+  const iconColor =
+    light.type === "point"
+      ? "#fbbf24"
+      : light.type === "spot"
+        ? "#fb923c"
+        : "#06b6d4";
   const activeColor = isSelected ? "#facc15" : iconColor;
 
   return (
-    <group ref={handleRef} position={[light.position.x, light.position.y, light.position.z]} onClick={handleClick}>
+    <group
+      ref={handleRef}
+      position={[light.position.x, light.position.y, light.position.z]}
+      onClick={handleClick}
+    >
       {light.type === "point" ? (
         <pointLight
           ref={lightRef as never}
@@ -156,7 +246,11 @@ function SceneLight({ light, isSelected, onSelect, registerRef }: SceneLightProp
           />
           <object3D
             ref={targetRef}
-            position={[light.target.x - light.position.x, light.target.y - light.position.y, light.target.z - light.position.z]}
+            position={[
+              light.target.x - light.position.x,
+              light.target.y - light.position.y,
+              light.target.z - light.position.z,
+            ]}
           />
         </>
       ) : (
@@ -169,7 +263,11 @@ function SceneLight({ light, isSelected, onSelect, registerRef }: SceneLightProp
           />
           <object3D
             ref={targetRef}
-            position={[light.target.x - light.position.x, light.target.y - light.position.y, light.target.z - light.position.z]}
+            position={[
+              light.target.x - light.position.x,
+              light.target.y - light.position.y,
+              light.target.z - light.position.z,
+            ]}
           />
         </>
       )}
@@ -186,22 +284,39 @@ function SceneLight({ light, isSelected, onSelect, registerRef }: SceneLightProp
           // Point: filled circle (omnidirectional — no direction to show)
           <mesh>
             <circleGeometry args={[0.12, 24]} />
-            <meshBasicMaterial color={activeColor} transparent opacity={isSelected ? 1 : 0.9} />
+            <meshBasicMaterial
+              color={activeColor}
+              transparent
+              opacity={isSelected ? 1 : 0.9}
+            />
           </mesh>
         ) : light.type === "spot" ? (
           // Spot: ring (hollow circle) — the real cone shows direction
           <mesh>
             <ringGeometry args={[0.09, 0.13, 24]} />
-            <meshBasicMaterial color={activeColor} transparent opacity={isSelected ? 1 : 0.9} side={2} />
+            <meshBasicMaterial
+              color={activeColor}
+              transparent
+              opacity={isSelected ? 1 : 0.9}
+              side={2}
+            />
           </mesh>
         ) : (
           // Directional: sun — circle + 8 radiating rays
           <>
             <mesh>
               <circleGeometry args={[0.09, 24]} />
-              <meshBasicMaterial color={activeColor} transparent opacity={isSelected ? 1 : 0.9} />
+              <meshBasicMaterial
+                color={activeColor}
+                transparent
+                opacity={isSelected ? 1 : 0.9}
+              />
             </mesh>
-            <SunRays color={activeColor} innerRadius={0.14} outerRadius={0.22} />
+            <SunRays
+              color={activeColor}
+              innerRadius={0.14}
+              outerRadius={0.22}
+            />
           </>
         )}
       </Billboard>
@@ -257,21 +372,41 @@ interface ObjectGroupProps {
 /** Shared wrapping `<group>` transform/ref/onClick logic (T-10), reused by
  * both the primitive and GLTF mesh branches so gizmo binding, selection, and
  * undo/redo behave identically regardless of `source.kind`. */
-function ObjectGroup({ object, onSelect, registerRef, children }: ObjectGroupProps) {
+function ObjectGroup({
+  object,
+  onSelect,
+  registerRef,
+  children,
+}: ObjectGroupProps) {
   // Stable per-object ref callback (identity only changes if `object.id` or
   // `registerRef` change) — an inline arrow here would be a new function
   // every render, causing React to detach/reattach the ref (and thus
   // re-register) on every commit, which loops forever (`registerRef` calls
   // `setState`).
-  const handleRef = useCallback((node: Group | null) => registerRef(object.id, node), [object.id, registerRef]);
+  const handleRef = useCallback(
+    (node: Group | null) => registerRef(object.id, node),
+    [object.id, registerRef],
+  );
 
   return (
     <group
       ref={handleRef}
       visible={object.visible}
-      position={[object.transform.position.x, object.transform.position.y, object.transform.position.z]}
-      rotation={[object.transform.rotation.x, object.transform.rotation.y, object.transform.rotation.z]}
-      scale={[object.transform.scale.x, object.transform.scale.y, object.transform.scale.z]}
+      position={[
+        object.transform.position.x,
+        object.transform.position.y,
+        object.transform.position.z,
+      ]}
+      rotation={[
+        object.transform.rotation.x,
+        object.transform.rotation.y,
+        object.transform.rotation.z,
+      ]}
+      scale={[
+        object.transform.scale.x,
+        object.transform.scale.y,
+        object.transform.scale.z,
+      ]}
       onClick={(event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
         onSelect();
@@ -293,15 +428,26 @@ interface MaterialOverrideProps {
 }
 
 function useOverrideTexture(textureDataUrl?: string) {
-  return useMemo(() => (textureDataUrl ? new TextureLoader().load(textureDataUrl) : null), [textureDataUrl]);
+  return useMemo(
+    () => (textureDataUrl ? new TextureLoader().load(textureDataUrl) : null),
+    [textureDataUrl],
+  );
 }
 
 /** Renders one primitive shape (FR-4/FR-5): geometry from the shared
  * `createPrimitiveGeometry` factory (also used by `useWorkspaceExport`, T-12)
  * plus its base color/texture/wireframe (T-10). */
-function WorkspacePrimitiveMesh({ object }: { object: WorkspaceObject; sceneWireframe: boolean }) {
+function WorkspacePrimitiveMesh({
+  object,
+}: {
+  object: WorkspaceObject;
+  sceneWireframe: boolean;
+}) {
   const geometry = useMemo(
-    () => createPrimitiveGeometry(object.source.kind === "primitive" ? object.source.shape : "cube"),
+    () =>
+      createPrimitiveGeometry(
+        object.source.kind === "primitive" ? object.source.shape : "cube",
+      ),
     [object.source],
   );
   const texture = useOverrideTexture(object.material?.textureDataUrl);
@@ -354,16 +500,25 @@ interface OverridableMaterial {
   emissiveIntensity?: number;
 }
 
-function WorkspaceGltfMesh({ object, sceneWireframe }: { object: WorkspaceObject; sceneWireframe: boolean }) {
+function WorkspaceGltfMesh({
+  object,
+  sceneWireframe,
+}: {
+  object: WorkspaceObject;
+  sceneWireframe: boolean;
+}) {
   const { scene } = useGLTF(object.url) as { scene: Object3D };
   const texture = useOverrideTexture(object.material?.textureDataUrl);
   const wireframe = object.wireframe || sceneWireframe;
 
   useEffect(() => {
-    const traverse = (scene as unknown as { traverse?: (cb: (node: Object3D) => void) => void }).traverse;
+    const traverse = (
+      scene as unknown as { traverse?: (cb: (node: Object3D) => void) => void }
+    ).traverse;
     if (typeof traverse !== "function") return; // guards jsdom test mocks
     traverse.call(scene, (node: Object3D) => {
-      const material = (node as unknown as { material?: OverridableMaterial }).material;
+      const material = (node as unknown as { material?: OverridableMaterial })
+        .material;
       if (!material) return;
       if (object.material?.color) material.color?.set(object.material.color);
       // Assigning `.map` on an already-rendered material doesn't by itself
@@ -376,10 +531,14 @@ function WorkspaceGltfMesh({ object, sceneWireframe }: { object: WorkspaceObject
       }
       material.wireframe = wireframe;
       // Apply PBR material properties
-      if (object.material?.metalness !== undefined) material.metalness = object.material.metalness;
-      if (object.material?.roughness !== undefined) material.roughness = object.material.roughness;
-      if (object.material?.emissive !== undefined) material.emissive?.set(object.material.emissive);
-      if (object.material?.emissiveIntensity !== undefined) material.emissiveIntensity = object.material.emissiveIntensity;
+      if (object.material?.metalness !== undefined)
+        material.metalness = object.material.metalness;
+      if (object.material?.roughness !== undefined)
+        material.roughness = object.material.roughness;
+      if (object.material?.emissive !== undefined)
+        material.emissive?.set(object.material.emissive);
+      if (object.material?.emissiveIntensity !== undefined)
+        material.emissiveIntensity = object.material.emissiveIntensity;
     });
   }, [
     scene,
@@ -403,16 +562,31 @@ function WorkspaceGltfMesh({ object, sceneWireframe }: { object: WorkspaceObject
  * primitive's empty `url` (Rules of Hooks — each branch is a distinct mounted
  * component, not a conditional hook call within one component instance). Not
  * a separately exported component, matching `GlbViewer.tsx`'s local `Model`
- * precedent. */
-function WorkspaceObjectMesh({ object, sceneWireframe, onSelect, registerRef }: WorkspaceObjectMeshProps) {
-  const isPrimitive = object.source.kind === "primitive";
+ * precedent.
+ *
+ * `object.url` can also be empty for a *non*-primitive source: a saved
+ * Poly Pizza `library` object has no durable url to reconstruct on reload
+ * (`WorkspaceSaveDTO.ts`'s `resolveObjectUrl`), so it must skip `useGLTF`
+ * the same way a primitive does rather than call it with `""` — an empty
+ * url resolves against the current page and the HTML response fails GLTF's
+ * JSON/binary parse (`GlbViewer.tsx`'s `Model` guards the same case). */
+function WorkspaceObjectMesh({
+  object,
+  sceneWireframe,
+  onSelect,
+  registerRef,
+}: WorkspaceObjectMeshProps) {
+  const canLoadGltf = object.source.kind !== "primitive" && object.url !== "";
   return (
     <ObjectGroup object={object} onSelect={onSelect} registerRef={registerRef}>
-      {isPrimitive ? (
-        <WorkspacePrimitiveMesh object={object} sceneWireframe={sceneWireframe} />
-      ) : (
+      {canLoadGltf ? (
         <WorkspaceGltfMesh object={object} sceneWireframe={sceneWireframe} />
-      )}
+      ) : object.source.kind === "primitive" ? (
+        <WorkspacePrimitiveMesh
+          object={object}
+          sceneWireframe={sceneWireframe}
+        />
+      ) : null}
     </ObjectGroup>
   );
 }
@@ -466,7 +640,9 @@ export function WorkspaceViewer({
 
   const isLightSelected = Boolean(selectedLightId);
   const activeSelectedId = isLightSelected ? selectedLightId : selectedId;
-  const candidateGroup = activeSelectedId ? groups[activeSelectedId] ?? null : null;
+  const candidateGroup = activeSelectedId
+    ? (groups[activeSelectedId] ?? null)
+    : null;
   // `groups` is React state, so it can briefly hold a `Group` instance that
   // has already been removed from the scene graph (deletion/undo, or a
   // Suspense fallback swapping for the real mesh) — one commit before its
@@ -484,7 +660,9 @@ export function WorkspaceViewer({
   function handleGizmoChange(): void {
     if (!selectedGroup) return;
     if (isLightSelected && selectedLightId) {
-      const light = lights.find((candidate) => candidate.id === selectedLightId);
+      const light = lights.find(
+        (candidate) => candidate.id === selectedLightId,
+      );
       if (!light) return;
       const nextPosition: Vec3Tuple = {
         x: selectedGroup.position.x,
@@ -501,21 +679,39 @@ export function WorkspaceViewer({
         y: light.target.y + delta.y,
         z: light.target.z + delta.z,
       };
-      onLightTransformChange?.(selectedLightId, { position: nextPosition, target: nextTarget });
+      onLightTransformChange?.(selectedLightId, {
+        position: nextPosition,
+        target: nextTarget,
+      });
       return;
     }
     if (!selectedId) return;
     onTransformChange(selectedId, {
-      position: { x: selectedGroup.position.x, y: selectedGroup.position.y, z: selectedGroup.position.z },
-      rotation: { x: selectedGroup.rotation.x, y: selectedGroup.rotation.y, z: selectedGroup.rotation.z },
-      scale: { x: selectedGroup.scale.x, y: selectedGroup.scale.y, z: selectedGroup.scale.z },
+      position: {
+        x: selectedGroup.position.x,
+        y: selectedGroup.position.y,
+        z: selectedGroup.position.z,
+      },
+      rotation: {
+        x: selectedGroup.rotation.x,
+        y: selectedGroup.rotation.y,
+        z: selectedGroup.rotation.z,
+      },
+      scale: {
+        x: selectedGroup.scale.x,
+        y: selectedGroup.scale.y,
+        z: selectedGroup.scale.z,
+      },
     });
   }
 
   // FR-11/AC-17: recenters the orbit target on the selected group's bounding
   // box without moving the camera position, keeping the object in view.
   const focusSelected = useCallback(() => {
-    const controls = orbitRef.current as unknown as { target?: Vector3; update?: () => void } | null;
+    const controls = orbitRef.current as unknown as {
+      target?: Vector3;
+      update?: () => void;
+    } | null;
     if (!selectedGroup || !controls?.target) return;
     const box = new Box3().setFromObject(selectedGroup);
     const center = box.getCenter(new Vector3());
@@ -541,9 +737,15 @@ export function WorkspaceViewer({
   }
 
   return (
-    <section aria-labelledby="workspace-viewer-heading" className="flex h-full min-h-0 flex-col gap-3">
+    <section
+      aria-labelledby="workspace-viewer-heading"
+      className="flex h-full min-h-0 flex-col gap-3"
+    >
       <div className="flex items-center justify-between">
-        <h2 id="workspace-viewer-heading" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+        <h2
+          id="workspace-viewer-heading"
+          className="text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+        >
           Workspace scene
         </h2>
         <div className="flex items-center gap-2">
@@ -558,7 +760,11 @@ export function WorkspaceViewer({
             </button>
           ) : null}
           {activeSelectedId ? (
-            <div role="group" aria-label="Transform gizmo mode" className="flex items-center gap-1">
+            <div
+              role="group"
+              aria-label="Transform gizmo mode"
+              className="flex items-center gap-1"
+            >
               {(["translate", "rotate", "scale"] as const).map((mode) => (
                 <button
                   key={mode}
@@ -582,11 +788,29 @@ export function WorkspaceViewer({
         data-testid="workspace-canvas-area"
         className="min-h-0 flex-1 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
       >
-        <Canvas camera={{ position: [4, 4, 4] }} shadows onPointerMissed={handleDeselectAll}>
-          {viewerSettings.background === "clear-dark" || viewerSettings.background === "clear-light" ? (
-            <color attach="background" args={[BACKGROUND_COLORS[viewerSettings.background]]} />
+        <Canvas
+          camera={{ position: [4, 4, 4] }}
+          shadows
+          onPointerMissed={handleDeselectAll}
+        >
+          {viewerSettings.background === "clear-dark" ||
+          viewerSettings.background === "clear-light" ? (
+            <color
+              attach="background"
+              args={[BACKGROUND_COLORS[viewerSettings.background]]}
+            />
           ) : (
-            <Environment preset={viewerSettings.background} background />
+            <EnvironmentErrorBoundary
+              key={viewerSettings.background}
+              fallback={
+                <color
+                  attach="background"
+                  args={[BACKGROUND_COLORS["clear-dark"]]}
+                />
+              }
+            >
+              <Environment preset={viewerSettings.background} background />
+            </EnvironmentErrorBoundary>
           )}
           {lights.length === 0 ? (
             // A-1: minimal built-in fallback so objects remain visible when
@@ -635,15 +859,26 @@ export function WorkspaceViewer({
               key={activeSelectedId}
               object={selectedGroup}
               mode={effectiveGizmoMode}
-              translationSnap={snapConfig.translate.enabled ? snapConfig.translate.step : null}
-              rotationSnap={snapConfig.rotate.enabled ? snapConfig.rotate.step : null}
-              scaleSnap={snapConfig.scale.enabled ? snapConfig.scale.step : null}
+              translationSnap={
+                snapConfig.translate.enabled ? snapConfig.translate.step : null
+              }
+              rotationSnap={
+                snapConfig.rotate.enabled ? snapConfig.rotate.step : null
+              }
+              scaleSnap={
+                snapConfig.scale.enabled ? snapConfig.scale.step : null
+              }
               onObjectChange={handleGizmoChange}
               onMouseDown={() => setIsDraggingGizmo(true)}
               onMouseUp={() => setIsDraggingGizmo(false)}
             />
           ) : null}
-          <OrbitControls ref={orbitRef} makeDefault enabled={!isDraggingGizmo} enablePan />
+          <OrbitControls
+            ref={orbitRef}
+            makeDefault
+            enabled={!isDraggingGizmo}
+            enablePan
+          />
         </Canvas>
       </div>
     </section>

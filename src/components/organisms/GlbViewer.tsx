@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense, useRef, type ComponentRef } from "react";
+import { Suspense, useRef, useState, type ComponentRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 
 import { IconButton } from "@/components/atoms/IconButton";
+import { ArQrDialog } from "@/components/molecules/ArQrDialog";
 import { useGlbUrl } from "@/components/features/viewer/useGlbUrl";
 import { glbUrlFor } from "@/components/shared/api/generationJobsApi";
 
@@ -57,6 +58,19 @@ function ObjIcon() {
   );
 }
 
+function ArIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+      className="h-4 w-4"
+    >
+      <path d="M10 1 3 4.5v11L10 19l7-3.5v-11L10 1Zm0 2.24 4.7 2.35L10 7.94 5.3 5.59 10 3.24ZM5 7.3l4 2v6.05l-4-2V7.3Zm6 8.05V9.3l4-2v6.05l-4 2Z" />
+    </svg>
+  );
+}
+
 /**
  * Interactive 3D preview built on Three.js via `@react-three/fiber` /
  * `@react-three/drei` (FR-6). Wires `useGlbUrl` for its data/business logic —
@@ -65,6 +79,7 @@ function ObjIcon() {
 export function GlbViewer({ jobId }: GlbViewerProps) {
   const { url, ready } = useGlbUrl(jobId);
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
+  const [isArDialogOpen, setIsArDialogOpen] = useState(false);
 
   return (
     <section
@@ -92,6 +107,9 @@ export function GlbViewer({ jobId }: GlbViewerProps) {
               disabled
             >
               <ObjIcon />
+            </IconButton>
+            <IconButton aria-label="View in AR" title="View in AR" onClick={() => setIsArDialogOpen(true)}>
+              <ArIcon />
             </IconButton>
             <a
               href={glbUrlFor(jobId, { download: true })}
@@ -132,6 +150,7 @@ export function GlbViewer({ jobId }: GlbViewerProps) {
           </Canvas>
         )}
       </div>
+      <ArQrDialog isOpen={isArDialogOpen} arPath={jobId ? `/ar/${jobId}` : null} onClose={() => setIsArDialogOpen(false)} />
     </section>
   );
 }

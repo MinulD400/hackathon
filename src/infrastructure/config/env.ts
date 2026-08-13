@@ -17,6 +17,7 @@ import path from "node:path";
  * - `POLY_PIZZA_API_KEY` (optional, no default — Poly Pizza is skipped as an asset source
  *                         when unset, and the search falls back to Poly Haven alone)
  * - `WORKSPACE_UPLOAD_STORAGE_ROOT` (optional, default: "data/workspace-uploads")
+ * - `AR_EXPORT_STORAGE_ROOT` (optional, default: "data/ar-exports")
  */
 export interface ServerConfig {
   hfSpaceId: string;
@@ -33,6 +34,12 @@ export interface ServerConfig {
    * feature, FR-2/AC-2) — a separate directory from `glbStorageRoot`, mirroring
    * the separate aggregate/adapter (`WorkspaceUploadFileSystemStorage`). */
   workspaceUploadStorageRoot: string;
+  /** Root directory for ephemeral merged-workspace GLBs exported for the AR
+   * hand-off flow (`/ar/workspace/{id}`, mirrors `/generate`'s existing
+   * `/ar/{jobId}` — see `GlbViewer`'s "View in AR" button). A separate
+   * directory from `glbStorageRoot`/`workspaceUploadStorageRoot`: these files
+   * are keyed by a throwaway export id, not a generation job or a save. */
+  arExportStorageRoot: string;
 }
 
 const DEFAULT_HF_SPACE_ID = "https://microsoft-trellis-2.hf.space";
@@ -41,6 +48,7 @@ const DEFAULT_MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 const DEFAULT_SQLITE_RELATIVE_PATH = path.join("data", "db", "image2glb.sqlite");
 const DEFAULT_GLB_STORAGE_RELATIVE_ROOT = path.join("data", "glb-storage");
 const DEFAULT_WORKSPACE_UPLOAD_STORAGE_RELATIVE_ROOT = path.join("data", "workspace-uploads");
+const DEFAULT_AR_EXPORT_STORAGE_RELATIVE_ROOT = path.join("data", "ar-exports");
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
@@ -72,6 +80,7 @@ export function getServerConfig(): ServerConfig {
     polyPizzaApiKey: process.env.POLY_PIZZA_API_KEY?.trim() || undefined,
     workspaceUploadStorageRoot:
       process.env.WORKSPACE_UPLOAD_STORAGE_ROOT?.trim() || DEFAULT_WORKSPACE_UPLOAD_STORAGE_RELATIVE_ROOT,
+    arExportStorageRoot: process.env.AR_EXPORT_STORAGE_ROOT?.trim() || DEFAULT_AR_EXPORT_STORAGE_RELATIVE_ROOT,
   };
 
   return cachedConfig;

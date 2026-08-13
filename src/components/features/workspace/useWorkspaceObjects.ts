@@ -31,6 +31,12 @@ export interface UseWorkspaceObjectsResult {
   importFromHistory: (jobId: string, url: string, fileName: string) => void;
   /** Adds a Poly Haven library model. Returns the new object's id. */
   importLibraryAsset: (asset: LibraryAssetImport) => string;
+  /** Re-points an existing library-sourced object at a freshly-picked asset,
+   * keeping its id/transform/visibility/wireframe (bugfix: "Retry import" —
+   * repairs an object whose url was lost, e.g. a pre-fix saved workspace's
+   * Poly Pizza-sourced object with no persisted url). No-op if `id` doesn't
+   * refer to a current object. */
+  replaceObjectSource: (id: string, asset: LibraryAssetImport) => void;
   select: (id: string | null) => void;
   updateTransform: (id: string, transform: Transform) => void;
   remove: (id: string) => void;
@@ -152,6 +158,26 @@ export function useWorkspaceObjects(): UseWorkspaceObjectsResult {
     setObjects((prev) => [...prev, newObject]);
     setSelectedId(newId);
     return newId;
+  }, []);
+
+  const replaceObjectSource = useCallback((id: string, asset: LibraryAssetImport) => {
+    setObjects((prev) =>
+      prev.map((object) =>
+        object.id === id
+          ? {
+              ...object,
+              source: {
+                kind: "library",
+                assetId: asset.assetId,
+                fileName: asset.name,
+                authors: asset.authors,
+              },
+              url: asset.url,
+              name: asset.name,
+            }
+          : object,
+      ),
+    );
   }, []);
 
   const importFromHistory = useCallback((jobId: string, url: string, fileName: string) => {
@@ -291,6 +317,7 @@ export function useWorkspaceObjects(): UseWorkspaceObjectsResult {
     importFiles,
     importFromHistory,
     importLibraryAsset,
+    replaceObjectSource,
     select,
     updateTransform,
     remove,

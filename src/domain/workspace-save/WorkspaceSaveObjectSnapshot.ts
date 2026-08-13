@@ -4,7 +4,19 @@
 export type WorkspaceSaveObjectSourceSnapshot =
   | { kind: "upload"; fileName: string; filePath: string | null }
   | { kind: "history"; jobId: string; fileName: string }
-  | { kind: "library"; assetId: string; fileName: string; authors: Record<string, string> }
+  | {
+      kind: "library";
+      assetId: string;
+      fileName: string;
+      authors: Record<string, string>;
+      /** The object's live fetch URL at save time (T-1, bugfix). Optional so
+       * saves written before this field existed still parse — those fall back
+       * to `resolveObjectUrl`'s by-id reconstruction, which only actually
+       * works for Poly Haven assets (Poly Pizza has no get-by-id endpoint, so
+       * pre-existing saves of Poly Pizza-sourced objects lose their url on
+       * load; this field is what prevents that going forward). */
+      url?: string;
+    }
   | { kind: "primitive"; shape: string };
 
 export interface Vec3Snapshot {

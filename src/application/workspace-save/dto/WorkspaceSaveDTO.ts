@@ -54,9 +54,13 @@ const POLYHAVEN_PREFIX = "polyhaven:";
 
 /** Resolves the fetchable `url` for a single saved object's source kind
  * (FR-6/AC-6): `upload` objects resolve to the dedicated file-streaming
- * route via the injected callback; `history`/`library` objects rebuild their
- * existing durable URL; `primitive` objects have no URL (matches the live
- * editor's own convention, `workspaceObject.ts`). */
+ * route via the injected callback; `history` objects rebuild their existing
+ * durable URL; `library` objects use the url persisted at save time
+ * (bugfix — see `WorkspaceSaveObjectSourceSnapshot`'s `library.url` doc),
+ * falling back to by-id reconstruction only for saves written before that
+ * field existed (works for Poly Haven, not Poly Pizza); `primitive` objects
+ * have no URL (matches the live editor's own convention,
+ * `workspaceObject.ts`). */
 function resolveObjectUrl(
   saveId: string,
   source: WorkspaceSaveObjectSourceSnapshot,
@@ -69,6 +73,7 @@ function resolveObjectUrl(
     case "history":
       return `/api/jobs/${source.jobId}/glb`;
     case "library":
+      if (source.url) return source.url;
       return source.assetId.startsWith(POLYHAVEN_PREFIX)
         ? `/api/assets/${source.assetId.slice(POLYHAVEN_PREFIX.length)}/gltf`
         : "";

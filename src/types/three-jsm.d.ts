@@ -59,3 +59,19 @@ declare module "three/examples/jsm/loaders/GLTFLoader.js" {
     ): void;
   }
 }
+
+declare module "three/examples/jsm/exporters/USDZExporter.js" {
+  import type { Object3D } from "three";
+
+  export interface USDZExporterOptions {
+    ar?: boolean;
+    includeAnchoringProperties?: boolean;
+    quickLookCompatible?: boolean;
+    maxTextureSize?: number;
+    [key: string]: unknown;
+  }
+
+  export class USDZExporter {
+    parse(scene: Object3D, options?: USDZExporterOptions): Promise<Uint8Array>;
+  }
+}

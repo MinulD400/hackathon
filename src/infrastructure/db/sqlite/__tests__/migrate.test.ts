@@ -55,15 +55,24 @@ describe("runMigrations", () => {
       .prepare("SELECT version FROM schema_migrations")
       .all()
       .map((row) => (row as { version: number }).version);
-    expect(appliedVersions).toEqual([1, 2]);
+    // Not hardcoded to a fixed length/list — grows with each new migration
+    // file (currently 0001-0002); asserting sequential/gapless coverage of
+    // every file actually on disk keeps this test correct as more are added.
+    const expectedVersions = fs
+      .readdirSync(MIGRATIONS_DIR)
+      .filter((fileName) => /^\d+_.*\.sql$/.test(fileName))
+      .map((fileName) => Number.parseInt(fileName, 10))
+      .sort((a, b) => a - b);
+    expect(appliedVersions).toEqual(expectedVersions);
   });
 
   it("is idempotent: re-running against an up-to-date database applies nothing new", () => {
     runMigrations(db, MIGRATIONS_DIR);
+    const migrationFileCount = fs.readdirSync(MIGRATIONS_DIR).filter((fileName) => /^\d+_.*\.sql$/.test(fileName)).length;
     runMigrations(db, MIGRATIONS_DIR);
 
     const appliedVersions = db.prepare("SELECT version FROM schema_migrations").all();
-    expect(appliedVersions).toHaveLength(2);
+    expect(appliedVersions).toHaveLength(migrationFileCount);
   });
 
   it("adds workspace_saves additively, leaving existing generation_jobs rows unchanged (AC-16)", () => {

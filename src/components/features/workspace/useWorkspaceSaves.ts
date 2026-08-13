@@ -112,7 +112,14 @@ export function useWorkspaceSaves(): UseWorkspaceSavesResult {
             wireObjects.push({
               id: object.id,
               name: object.name,
-              source: object.source,
+              // Bugfix: `library`-sourced objects (AI/asset-search imports)
+              // carry their fetchable url only on the top-level
+              // `WorkspaceObject`, not in `source` — persisting it here is
+              // what lets the server return a working url on load instead of
+              // trying to reconstruct one from `assetId` alone, which only
+              // Poly Haven's id scheme supports (Poly Pizza has no
+              // get-by-id endpoint).
+              source: object.source.kind === "library" ? { ...object.source, url: object.url } : object.source,
               transform: object.transform,
               visible: object.visible,
               wireframe: object.wireframe,

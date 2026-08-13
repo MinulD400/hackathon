@@ -33,10 +33,15 @@ export class RateLimiter {
   private records = new Map<string, RateLimitRecord>();
 
   /** Maximum requests per window. */
-  private readonly maxRequests = 100;
+  private readonly maxRequests: number;
 
   /** Window duration in milliseconds (1 hour). */
-  private readonly windowMs = 60 * 60 * 1000;
+  private readonly windowMs: number;
+
+  constructor(maxRequests = 10, windowMs = 60 * 60 * 1000) {
+    this.maxRequests = maxRequests;
+    this.windowMs = windowMs;
+  }
 
   /**
    * Checks if a user has exceeded the rate limit.

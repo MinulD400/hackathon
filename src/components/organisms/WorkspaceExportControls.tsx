@@ -10,9 +10,10 @@ export interface WorkspaceExportControlsProps {
 }
 
 /**
- * "Export workspace" (required, FR-12/FR-13) and "Export selected" (optional,
- * FR-14) controls. Owns `useWorkspaceExport` directly since export has no
- * shared state beyond the caller-supplied objects snapshot (`04-lld.md` §5).
+ * "Export workspace" (required, FR-12/FR-13) and "Export selected"
+ * (optional, FR-14) controls. Owns `useWorkspaceExport` directly since it
+ * has no shared state beyond the caller-supplied objects snapshot
+ * (`04-lld.md` §5).
  */
 export function WorkspaceExportControls({ objects, selectedObject }: WorkspaceExportControlsProps) {
   const { status, error, exportMerged, exportSelected } = useWorkspaceExport();

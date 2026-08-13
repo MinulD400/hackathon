@@ -106,6 +106,26 @@ describe("GlbViewer", () => {
     expect(downloadLink).toHaveAttribute("href", "/api/jobs/job-1/glb?download=true");
   });
 
+  it("the AR control is a button (not a link/download) and opens the AR dialog on click, leaving the download link untouched", async () => {
+    vi.spyOn(generationJobsApi, "getJob").mockResolvedValue(makeJob());
+    const user = userEvent.setup();
+
+    render(<GlbViewer jobId="job-1" />);
+    await waitFor(() => expect(screen.getByTestId("r3f-canvas")).toBeInTheDocument());
+
+    const arButton = screen.getByRole("button", { name: "View in AR" });
+    expect(arButton.tagName).toBe("BUTTON");
+    expect(arButton).not.toHaveAttribute("href");
+
+    expect(screen.queryByText("View in AR", { selector: "h2" })).not.toBeInTheDocument();
+    await user.click(arButton);
+    expect(screen.getByRole("heading", { name: "View in AR" })).toBeInTheDocument();
+
+    // The download link is unaffected by the AR button existing.
+    const downloadLink = screen.getByRole("link", { name: "Download GLB file" });
+    expect(downloadLink).toHaveAttribute("href", "/api/jobs/job-1/glb?download=true");
+  });
+
   it("does not render the reset/OBJ/download controls when no job is ready (D7)", () => {
     render(<GlbViewer jobId={null} />);
     expect(screen.queryByRole("button", { name: "Reset camera view" })).not.toBeInTheDocument();

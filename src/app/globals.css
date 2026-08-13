@@ -33,3 +33,200 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   ANIMATED BACKGROUND GRID
+   Creates a subtle animated perspective grid that drifts upward,
+   giving the page depth without distracting from foreground content.
+────────────────────────────────────────────────────────────── */
+.bg-grid-animated {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* The main grid layer rendered via SVG background pattern */
+.bg-grid-animated::before {
+  content: "";
+  position: absolute;
+  inset: -100% -50%;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 72px 72px;
+  animation: grid-drift 20s linear infinite;
+  transform-origin: center bottom;
+}
+
+/* Diagonal accent lines layered on top for extra editorial depth */
+.bg-grid-animated::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    ellipse 80% 60% at 50% 0%,
+    rgba(255,255,255,0.03) 0%,
+    transparent 70%
+  );
+}
+
+@keyframes grid-drift {
+  0%   { transform: translateY(0px);   }
+  100% { transform: translateY(72px);  }
+}
+
+/* Glowing corner accents — fired via JS class or always-on */
+.bg-grid-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.06;
+  animation: glow-pulse 8s ease-in-out infinite alternate;
+}
+
+.bg-grid-glow-tl {
+  width: 600px; height: 600px;
+  top: -200px; left: -200px;
+  background: radial-gradient(circle, #ffffff 0%, transparent 70%);
+}
+
+.bg-grid-glow-br {
+  width: 500px; height: 500px;
+  bottom: -150px; right: -100px;
+  background: radial-gradient(circle, #888888 0%, transparent 70%);
+  animation-delay: 4s;
+}
+
+@keyframes glow-pulse {
+  0%   { opacity: 0.04; transform: scale(1);    }
+  100% { opacity: 0.09; transform: scale(1.12); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BUTTON ENHANCEMENTS — consistent sizing, ripple-on-hover,
+   pressed scale, and smooth transitions across all breakpoints.
+────────────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(0.5rem, 1.5vw, 1rem);
+  padding: clamp(0.75rem, 1.5vw, 1rem) clamp(1.5rem, 3vw, 2.25rem);
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.625rem, 1vw, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  border: 1px solid #ffffff;
+  position: relative;
+  overflow: hidden;
+  transition:
+    background 0.28s ease,
+    color 0.28s ease,
+    box-shadow 0.28s ease,
+    transform 0.15s ease;
+  will-change: transform;
+}
+
+.btn-primary:hover {
+  background: #e5e5e5;
+  box-shadow: 0 0 40px rgba(255,255,255,0.18), 0 8px 32px rgba(0,0,0,0.5);
+  transform: translateY(-2px);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: none;
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(0.5rem, 1.5vw, 1rem);
+  padding: clamp(0.75rem, 1.5vw, 1rem) clamp(1.5rem, 3vw, 2.25rem);
+  background: transparent;
+  color: #d4d4d4;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.625rem, 1vw, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.28);
+  position: relative;
+  overflow: hidden;
+  transition:
+    background 0.28s ease,
+    color 0.28s ease,
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    transform 0.15s ease;
+  will-change: transform;
+}
+
+.btn-outline:hover {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  box-shadow: 0 0 40px rgba(255,255,255,0.12), 0 8px 32px rgba(0,0,0,0.4);
+  transform: translateY(-2px);
+}
+
+.btn-outline:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: none;
+}
+
+/* Shimmer sweep on all interactive-hover elements */
+.interactive-hover {
+  position: relative;
+  overflow: hidden;
+  transition:
+    background 0.28s ease,
+    color 0.28s ease,
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    transform 0.15s ease;
+}
+
+.interactive-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255,255,255,0.1) 50%,
+    transparent 65%
+  );
+  transform: translateX(-110%);
+  transition: transform 0.5s ease;
+}
+
+.interactive-hover:hover::after {
+  transform: translateX(110%);
+}
+
+.interactive-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.interactive-hover:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION SPACING — consistent vertical rhythm, responsive.
+────────────────────────────────────────────────────────────── */
+.section-gap {
+  margin-top: clamp(3rem, 7vw, 9rem);
+  margin-bottom: clamp(3rem, 7vw, 9rem);
+}
+
+.section-gap-sm {
+  margin-top: clamp(2rem, 4vw, 5rem);
+  margin-bottom: clamp(2rem, 4vw, 5rem);
+}

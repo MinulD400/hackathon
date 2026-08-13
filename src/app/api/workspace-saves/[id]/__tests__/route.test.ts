@@ -81,6 +81,63 @@ describe("GET/DELETE /api/workspace-saves/{id}", () => {
     expect(body.objects[0].url).toBe("/api/workspace-saves/save-1/objects/o-upload/file");
   });
 
+  it("returns a library object's persisted url as-is, regardless of source provider (bugfix: Poly Pizza has no by-id reconstruction)", async () => {
+    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    await repository.create(
+      WorkspaceSave.createNew({
+        id: "save-library",
+        name: "Scene",
+        objects: [
+          {
+            id: "o-library",
+            source: {
+              kind: "library",
+              assetId: "polypizza:12345",
+              fileName: "chair.glb",
+              authors: {},
+              url: "https://static.polypizza.com/12345/chair.glb",
+            },
+            transform: IDENTITY,
+            visible: true,
+            wireframe: false,
+          },
+        ],
+        lights: [],
+        now: new Date(),
+      }),
+    );
+
+    const response = await GET(new Request("http://localhost/api/workspace-saves/save-library"), {
+      params: Promise.resolve({ id: "save-library" }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { objects: { url: string }[] };
+    expect(body.objects[0].url).toBe("https://static.polypizza.com/12345/chair.glb");
+  });
+
+  it("falls back to an empty url for a pre-fix library object with no persisted url and a non-Poly-Haven id", async () => {
+    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    await repository.create(
+      WorkspaceSave.createNew({
+        id: "save-library-legacy",
+        name: "Scene",
+        objects: [
+          { id: "o-library", source: { kind: "library", assetId: "polypizza:99", fileName: "chair.glb", authors: {} }, transform: IDENTITY, visible: true, wireframe: false },
+        ],
+        lights: [],
+        now: new Date(),
+      }),
+    );
+
+    const response = await GET(new Request("http://localhost/api/workspace-saves/save-library-legacy"), {
+      params: Promise.resolve({ id: "save-library-legacy" }),
+    });
+
+    const body = (await response.json()) as { objects: { url: string }[] };
+    expect(body.objects[0].url).toBe("");
+  });
+
   it("DELETE removes the save so a subsequent GET 404s (AC-5, AC-12, AC-14)", async () => {
     const repository = new WorkspaceSaveSqliteRepository(getDb());
     await repository.create(
