@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { WorkspaceSave } from "@/domain/workspace-save/WorkspaceSave";
@@ -12,12 +12,12 @@ const IDENTITY = {
 };
 
 describe("WorkspaceSaveSqliteRepository", () => {
-  let db: Database.Database;
+  let db: Client;
   let repository: WorkspaceSaveSqliteRepository;
 
-  beforeEach(() => {
-    db = new Database(":memory:");
-    runMigrations(db);
+  beforeEach(async () => {
+    db = createClient({ url: ":memory:" });
+    await runMigrations(db);
     repository = new WorkspaceSaveSqliteRepository(db);
   });
 

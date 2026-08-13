@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { GenerationJob } from "@/domain/generation-job/GenerationJob";
@@ -6,12 +6,12 @@ import { GenerationJobSqliteRepository } from "@/infrastructure/db/GenerationJob
 import { runMigrations } from "@/infrastructure/db/sqlite/migrate";
 
 describe("GenerationJobSqliteRepository", () => {
-  let db: Database.Database;
+  let db: Client;
   let repository: GenerationJobSqliteRepository;
 
-  beforeEach(() => {
-    db = new Database(":memory:");
-    runMigrations(db);
+  beforeEach(async () => {
+    db = createClient({ url: ":memory:" });
+    await runMigrations(db);
     repository = new GenerationJobSqliteRepository(db);
   });
 
@@ -84,7 +84,7 @@ describe("GenerationJobSqliteRepository", () => {
     expect(jobs.map((job) => job.id)).toEqual(["job-newer", "job-older"]);
   });
 
-  it("persists jobs so a fresh repository instance against the same DB file sees the same rows (NFR-7 durability, simulated)", async () => {
+  it("persists jobs so a fresh repository instance against the same DB sees the same rows (NFR-7 durability, simulated)", async () => {
     const job = GenerationJob.createProcessing({
       id: "job-1",
       sourceImageName: "photo.png",
