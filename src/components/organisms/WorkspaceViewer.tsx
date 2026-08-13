@@ -632,7 +632,7 @@ export function WorkspaceViewer({
           ))}
           {selectedGroup ? (
             <TransformControls
-              key={activeSelectedId}
+              key={activeSelectedId ?? undefined}
               object={selectedGroup}
               mode={effectiveGizmoMode}
               translationSnap={snapConfig.translate.enabled ? snapConfig.translate.step : null}

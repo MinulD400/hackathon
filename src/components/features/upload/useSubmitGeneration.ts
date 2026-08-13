@@ -21,6 +21,22 @@ export interface UseSubmitGenerationResult {
   error: string | null;
   job: SubmitGenerationJobResponseView | null;
   submit: (file: File, settings: GenerationSettingsValues) => Promise<void>;
+  /** Runs the same client-side checks `submit()` does, without calling the
+   * API — used to reject a bad file at selection time (before the preview
+   * stage), rather than only once "Submit" is pressed. Sets `error`/`status`
+   * the same way a failed `submit()` would; returns whether the file passed. */
+  validate: (file: File) => boolean;
+}
+
+function validateFile(file: File): string | null {
+  if (file.size <= 0) return "No image file was provided.";
+  if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+    return "Unsupported file type. Please upload a JPG, PNG, or WebP image.";
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return `File is too large. Maximum allowed size is ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB.`;
+  }
+  return null;
 }
 
 /**
@@ -38,24 +54,26 @@ export function useSubmitGeneration(
   const [error, setError] = useState<string | null>(null);
   const [job, setJob] = useState<SubmitGenerationJobResponseView | null>(null);
 
+  const validate = useCallback((file: File): boolean => {
+    const message = validateFile(file);
+    if (message) {
+      setStatus("error");
+      setError(message);
+      return false;
+    }
+    setError(null);
+    return true;
+  }, []);
+
   const submit = useCallback(
     async (file: File, settings: GenerationSettingsValues) => {
       setStatus("validating");
       setError(null);
 
-      if (file.size <= 0) {
+      const message = validateFile(file);
+      if (message) {
         setStatus("error");
-        setError("No image file was provided.");
-        return;
-      }
-      if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
-        setStatus("error");
-        setError("Unsupported file type. Please upload a JPG, PNG, or WebP image.");
-        return;
-      }
-      if (file.size > MAX_UPLOAD_BYTES) {
-        setStatus("error");
-        setError(`File is too large. Maximum allowed size is ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB.`);
+        setError(message);
         return;
       }
 
@@ -73,5 +91,5 @@ export function useSubmitGeneration(
     [onSubmitted],
   );
 
-  return { status, error, job, submit };
+  return { status, error, job, submit, validate };
 }

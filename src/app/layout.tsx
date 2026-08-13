@@ -15,19 +15,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Image2GLB Studio",
-  description: "Upload an image and generate an interactive 3D GLB model via TRELLIS.2.",
+  title: "ALTURA • 3D AI Spatial Studio",
+  description: "Transform 2D reference images into high-fidelity 3D spatial models & scenes with ALTURA.",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex h-screen flex-col overflow-hidden">
+      <body className="flex h-screen flex-col overflow-hidden bg-[#030712]">
         <TopNav />
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div id="app-scroll-root" className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </body>
     </html>
   );
