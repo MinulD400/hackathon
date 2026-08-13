@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { clone as cloneWithSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { Color, Group, Mesh, MeshStandardMaterial, Object3D, TextureLoader } from "three";
 
 import { createPrimitiveGeometry } from "@/components/features/workspace/primitiveGeometry";
@@ -73,7 +74,13 @@ async function buildExportGroup(objects: WorkspaceObject[]): Promise<Group> {
       root = new Mesh(createPrimitiveGeometry(object.source.shape), new MeshStandardMaterial({ color: "#cccccc" }));
     } else {
       const gltf = await loader.loadAsync(object.url);
-      root = gltf.scene.clone(true) as Object3D;
+      // `Object3D.clone(true)` does not rebind `SkinnedMesh.skeleton.bones` to
+      // the cloned bone nodes, leaving skinned/rigged assets with
+      // dangling/undefined bone references — surfaced downstream as
+      // "Cannot set properties of undefined (setting 'isBone')" once the
+      // exporter or AR viewer touches the skeleton. `SkeletonUtils.clone`
+      // deep-clones and correctly re-links skeleton bindings.
+      root = cloneWithSkeleton(gltf.scene) as Object3D;
     }
     await applyMaterialOverride(root, object);
     root.position.set(object.transform.position.x, object.transform.position.y, object.transform.position.z);
