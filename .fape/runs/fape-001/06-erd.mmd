@@ -1,0 +1,28 @@
+%% FAPE run fape-001
+%% NOTE: This feature does not add new database entities. The specification is
+%% session-only (conversation state stored in React state, not persisted).
+%% The ERD below shows existing entities for context; no schema changes required.
+%%
+%% No new tables: Object generation is stateless, multi-turn conversation stored
+%% only in frontend state (useObjectAssistant hook).
+%% No modified columns: Existing workspace objects use WorkspaceObject type (frontend only),
+%% not persisted to database.
+
+erDiagram
+    GENERATION_JOBS {
+        TEXT id PK "not null, unique identifier"
+        TEXT status "not null, check status in (processing, complete, failed)"
+        TEXT source_image_name "not null"
+        TEXT source_image_mime_type "not null"
+        INTEGER source_image_size_bytes "not null"
+        TEXT glb_file_path "nullable, path to generated GLB file"
+        INTEGER glb_size_bytes "nullable, size of GLB file"
+        TEXT error_message "nullable, error details if status=failed"
+        TEXT created_at "not null, ISO 8601 timestamp"
+        TEXT updated_at "not null, ISO 8601 timestamp"
+    }
+
+    %% No new entities for object assistant feature.
+    %% Conversation history is session-scoped and not persisted.
+    %% Generated objects exist in workspace state (React) only.
+    %% No foreign keys or relationships added.

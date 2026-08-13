@@ -1,0 +1,299 @@
+openapi: 3.1.0
+info:
+  title: Workspace Save/Load API
+  version: 1.0.0
+  description: >
+    Endpoints added by run 20260810-195134-workspace-save-load. Only the
+    changed/added surface is documented here — the rest of this app's API
+    (generation jobs, assets) is unchanged and out of scope for this file.
+servers:
+  - url: /api
+paths:
+  /workspace-saves:
+    get:
+      operationId: listWorkspaceSaves
+      summary: List saved workspaces, newest first (FR-4, AC-4)
+      responses:
+        "200":
+          description: List of saved workspaces
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WorkspaceSaveListItem"
+                  total:
+                    type: integer
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createWorkspaceSave
+      summary: Save the current workspace as a new row (FR-1, FR-2, FR-3, FR-11, FR-13)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [payload]
+              properties:
+                payload:
+                  type: string
+                  description: >
+                    JSON-encoded { name, objects, lights } — see
+                    WorkspaceSaveCreatePayload. `objects` entries with
+                    source.kind === "upload" omit `filePath` (server-assigned).
+                file_<objectId>:
+                  type: string
+                  format: binary
+                  description: >
+                    One part per upload-sourced object in `payload.objects`,
+                    named literally `file_{objectId}` (e.g. `file_3fae...`).
+                    Required for every object whose source.kind is "upload"
+                    (FR-2, AC-2, AC-17).
+      responses:
+        "201":
+          description: Saved workspace created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceSaveListItem"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /workspace-saves/{id}:
+    get:
+      operationId: getWorkspaceSave
+      summary: Load a saved workspace's full object/light snapshot (FR-5, FR-6, AC-5, AC-6)
+      parameters:
+        - $ref: "#/components/parameters/SaveId"
+      responses:
+        "200":
+          description: Full saved-workspace snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceSaveDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteWorkspaceSave
+      summary: Delete a saved workspace and its persisted upload files (FR-10, A-5, AC-12)
+      parameters:
+        - $ref: "#/components/parameters/SaveId"
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /workspace-saves/{id}/objects/{objectId}/file:
+    get:
+      operationId: getWorkspaceSaveObjectFile
+      summary: Stream a saved upload-sourced object's persisted GLB bytes (FR-6, AC-6)
+      parameters:
+        - $ref: "#/components/parameters/SaveId"
+        - name: objectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: GLB binary stream
+          content:
+            model/gltf-binary:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: >
+            Save not found, object not found, object is not an upload-sourced
+            object, or the stored file is missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+components:
+  parameters:
+    SaveId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    ValidationError:
+      description: Request failed validation (e.g. name length, missing upload bytes)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Saved workspace not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+  schemas:
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [VALIDATION_ERROR, NOT_FOUND, INTERNAL_ERROR]
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+    Vec3:
+      type: object
+      required: [x, y, z]
+      properties:
+        x: { type: number }
+        y: { type: number }
+        z: { type: number }
+    Transform:
+      type: object
+      required: [position, rotation, scale]
+      properties:
+        position: { $ref: "#/components/schemas/Vec3" }
+        rotation: { $ref: "#/components/schemas/Vec3" }
+        scale: { $ref: "#/components/schemas/Vec3" }
+    WorkspaceObjectMaterial:
+      type: object
+      required: [color]
+      properties:
+        color: { type: string }
+        textureDataUrl: { type: string }
+        metalness: { type: number }
+        roughness: { type: number }
+        emissive: { type: string }
+        emissiveIntensity: { type: number }
+    WorkspaceObjectSource:
+      oneOf:
+        - type: object
+          required: [kind, fileName]
+          properties:
+            kind: { type: string, const: upload }
+            fileName: { type: string }
+            filePath:
+              type: string
+              nullable: true
+              description: Server-assigned durable relative path (FR-2). Absent/null on create requests.
+        - type: object
+          required: [kind, jobId, fileName]
+          properties:
+            kind: { type: string, const: history }
+            jobId: { type: string }
+            fileName: { type: string }
+        - type: object
+          required: [kind, assetId, fileName, authors]
+          properties:
+            kind: { type: string, const: library }
+            assetId: { type: string }
+            fileName: { type: string }
+            authors:
+              type: object
+              additionalProperties:
+                type: string
+        - type: object
+          required: [kind, shape]
+          properties:
+            kind: { type: string, const: primitive }
+            shape: { type: string }
+    WorkspaceSaveObject:
+      type: object
+      required: [id, source, transform, visible, wireframe]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        source: { $ref: "#/components/schemas/WorkspaceObjectSource" }
+        url:
+          type: string
+          description: >
+            Present only in GET detail responses — resolved fetchable URL for
+            every source kind (upload → file-stream route, history →
+            /api/jobs/{jobId}/glb, library → /api/assets/{assetId}/gltf,
+            primitive → "").
+        transform: { $ref: "#/components/schemas/Transform" }
+        visible: { type: boolean }
+        wireframe: { type: boolean }
+        material: { $ref: "#/components/schemas/WorkspaceObjectMaterial" }
+    WorkspaceSaveLight:
+      type: object
+      required: [id, type, color, intensity, castShadow, position, target]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type:
+          type: string
+          enum: [point, spot, directional]
+        color: { type: string }
+        intensity: { type: number }
+        castShadow: { type: boolean }
+        position: { $ref: "#/components/schemas/Vec3" }
+        target: { $ref: "#/components/schemas/Vec3" }
+    WorkspaceSaveCreatePayload:
+      type: object
+      required: [name, objects, lights]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        objects:
+          type: array
+          items: { $ref: "#/components/schemas/WorkspaceSaveObject" }
+        lights:
+          type: array
+          items: { $ref: "#/components/schemas/WorkspaceSaveLight" }
+    WorkspaceSaveListItem:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        createdAt:
+          type: string
+          format: date-time
+    WorkspaceSaveDetail:
+      allOf:
+        - $ref: "#/components/schemas/WorkspaceSaveListItem"
+        - type: object
+          required: [objects, lights]
+          properties:
+            objects:
+              type: array
+              items: { $ref: "#/components/schemas/WorkspaceSaveObject" }
+            lights:
+              type: array
+              items: { $ref: "#/components/schemas/WorkspaceSaveLight" }
