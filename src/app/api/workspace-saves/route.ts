@@ -10,7 +10,7 @@ import { ValidationError } from "@/application/workspace-save/validation/errors"
 import { getServerConfig } from "@/infrastructure/config/env";
 import { getDb } from "@/infrastructure/db/sqlite/client";
 import { WorkspaceSaveSqliteRepository } from "@/infrastructure/db/WorkspaceSaveSqliteRepository";
-import { WorkspaceUploadFileSystemStorage } from "@/infrastructure/storage/WorkspaceUploadFileSystemStorage";
+import { createWorkspaceUploadFileStorage } from "@/infrastructure/storage/storageFactory";
 
 /** `GET /api/workspace-saves` — saved-workspace list, newest first (FR-3, AC-4). */
 export async function GET() {
@@ -38,7 +38,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const config = getServerConfig();
   const repository = new WorkspaceSaveSqliteRepository(await getDb());
-  const storage = new WorkspaceUploadFileSystemStorage(config.workspaceUploadStorageRoot);
+  const storage = createWorkspaceUploadFileStorage(config, config.workspaceUploadStorageRoot);
 
   try {
     const formData = await request.formData();

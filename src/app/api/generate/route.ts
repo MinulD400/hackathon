@@ -7,7 +7,7 @@ import type { RawGenerationSettings } from "@/application/generation-job/validat
 import { getServerConfig } from "@/infrastructure/config/env";
 import { getDb } from "@/infrastructure/db/sqlite/client";
 import { GenerationJobSqliteRepository } from "@/infrastructure/db/GenerationJobSqliteRepository";
-import { GlbFileSystemStorage } from "@/infrastructure/storage/GlbFileSystemStorage";
+import { createGlbFileStorage } from "@/infrastructure/storage/storageFactory";
 import { TrellisGradioClient } from "@/infrastructure/ai/trellis/TrellisGradioClient";
 
 /** Reads an optional multipart string field, treating a missing field or an
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     spaceId: config.hfSpaceId,
     hfToken: config.hfToken,
   });
-  const glbFileStorage = new GlbFileSystemStorage(config.glbStorageRoot);
+  const glbFileStorage = createGlbFileStorage(config, config.glbStorageRoot);
   const processGenerationJob = new ProcessGenerationJob(
     repository,
     glbGenerationService,

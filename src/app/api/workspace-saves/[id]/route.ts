@@ -6,7 +6,7 @@ import { NotFoundError } from "@/application/workspace-save/validation/errors";
 import { getServerConfig } from "@/infrastructure/config/env";
 import { getDb } from "@/infrastructure/db/sqlite/client";
 import { WorkspaceSaveSqliteRepository } from "@/infrastructure/db/WorkspaceSaveSqliteRepository";
-import { WorkspaceUploadFileSystemStorage } from "@/infrastructure/storage/WorkspaceUploadFileSystemStorage";
+import { createWorkspaceUploadFileStorage } from "@/infrastructure/storage/storageFactory";
 
 /** `GET /api/workspace-saves/{id}` — a saved workspace's full detail, with
  * every upload-kind object's url rewritten to the file-streaming route
@@ -40,7 +40,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   try {
     const config = getServerConfig();
     const repository = new WorkspaceSaveSqliteRepository(await getDb());
-    const storage = new WorkspaceUploadFileSystemStorage(config.workspaceUploadStorageRoot);
+    const storage = createWorkspaceUploadFileStorage(config, config.workspaceUploadStorageRoot);
     const deleteWorkspaceSave = new DeleteWorkspaceSave(repository, storage);
     await deleteWorkspaceSave.execute(id);
     return NextResponse.json({ success: true });

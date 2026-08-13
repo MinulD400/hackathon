@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getServerConfig } from "@/infrastructure/config/env";
-import { GlbFileSystemStorage } from "@/infrastructure/storage/GlbFileSystemStorage";
+import { createGlbFileStorage } from "@/infrastructure/storage/storageFactory";
 
 /** `GET /api/workspace-ar-exports/{id}/glb` — streams a workspace AR export's
  * binary, the same shape as `/api/jobs/{id}/glb` (mirrors it deliberately so
@@ -14,7 +14,7 @@ import { GlbFileSystemStorage } from "@/infrastructure/storage/GlbFileSystemStor
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const config = getServerConfig();
-  const storage = new GlbFileSystemStorage(config.arExportStorageRoot);
+  const storage = createGlbFileStorage(config, config.arExportStorageRoot);
 
   try {
     const filePath = `${id}.glb`;

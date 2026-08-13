@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { getServerConfig } from "@/infrastructure/config/env";
 import { getDb } from "@/infrastructure/db/sqlite/client";
 import { WorkspaceSaveSqliteRepository } from "@/infrastructure/db/WorkspaceSaveSqliteRepository";
-import { WorkspaceUploadFileSystemStorage } from "@/infrastructure/storage/WorkspaceUploadFileSystemStorage";
+import { createWorkspaceUploadFileStorage } from "@/infrastructure/storage/storageFactory";
 
 /**
  * `GET /api/workspace-saves/{id}/objects/{objectId}/file` — streams a saved
@@ -21,7 +21,7 @@ export async function GET(
   const { id, objectId } = await params;
   const config = getServerConfig();
   const repository = new WorkspaceSaveSqliteRepository(await getDb());
-  const storage = new WorkspaceUploadFileSystemStorage(config.workspaceUploadStorageRoot);
+  const storage = createWorkspaceUploadFileStorage(config, config.workspaceUploadStorageRoot);
 
   try {
     const save = await repository.findById(id);

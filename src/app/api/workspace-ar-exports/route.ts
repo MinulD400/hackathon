@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getServerConfig } from "@/infrastructure/config/env";
-import { GlbFileSystemStorage } from "@/infrastructure/storage/GlbFileSystemStorage";
+import { createGlbFileStorage } from "@/infrastructure/storage/storageFactory";
 
 /**
  * `POST /api/workspace-ar-exports` — accepts a client-merged workspace `.glb`
@@ -19,7 +19,7 @@ import { GlbFileSystemStorage } from "@/infrastructure/storage/GlbFileSystemStor
  */
 export async function POST(request: NextRequest) {
   const config = getServerConfig();
-  const storage = new GlbFileSystemStorage(config.arExportStorageRoot);
+  const storage = createGlbFileStorage(config, config.arExportStorageRoot);
 
   try {
     const formData = await request.formData();

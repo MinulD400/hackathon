@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getServerConfig } from "@/infrastructure/config/env";
 import { getDb } from "@/infrastructure/db/sqlite/client";
 import { GenerationJobSqliteRepository } from "@/infrastructure/db/GenerationJobSqliteRepository";
-import { GlbFileSystemStorage } from "@/infrastructure/storage/GlbFileSystemStorage";
+import { createGlbFileStorage } from "@/infrastructure/storage/storageFactory";
 
 /**
  * `GET /api/jobs/{id}/glb` — streams the completed job's GLB binary, used both
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const config = getServerConfig();
   const repository = new GenerationJobSqliteRepository(await getDb());
-  const glbFileStorage = new GlbFileSystemStorage(config.glbStorageRoot);
+  const glbFileStorage = createGlbFileStorage(config, config.glbStorageRoot);
 
   try {
     const job = await repository.findById(id);

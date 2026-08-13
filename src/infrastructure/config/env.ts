@@ -20,6 +20,12 @@ import path from "node:path";
  *                         when unset, and the search falls back to Poly Haven alone)
  * - `WORKSPACE_UPLOAD_STORAGE_ROOT` (optional, default: "data/workspace-uploads")
  * - `AR_EXPORT_STORAGE_ROOT` (optional, default: "data/ar-exports")
+ * - `BLOB_READ_WRITE_TOKEN`   (optional; set automatically when a Vercel Blob store
+ *                             is attached to the project. When present, GLB storage
+ *                             uses Vercel Blob instead of the local filesystem — the
+ *                             filesystem adapters only work in environments with a
+ *                             writable, persistent disk, which Vercel's serverless
+ *                             functions are not: see `storageFactory.ts`)
  */
 export interface ServerConfig {
   hfSpaceId: string;
@@ -46,6 +52,13 @@ export interface ServerConfig {
    * directory from `glbStorageRoot`/`workspaceUploadStorageRoot`: these files
    * are keyed by a throwaway export id, not a generation job or a save. */
   arExportStorageRoot: string;
+  /** Vercel Blob read/write token. When set, `storageFactory.ts` backs GLB
+   * storage with Vercel Blob instead of the local filesystem — required for
+   * any deployment target without a writable, persistent disk (e.g. Vercel's
+   * serverless functions, which are read-only outside `/tmp` and don't share
+   * `/tmp` across invocations). `undefined` in local dev keeps the existing
+   * filesystem adapters in use. */
+  blobReadWriteToken?: string;
 }
 
 const DEFAULT_HF_SPACE_ID = "https://microsoft-trellis-2.hf.space";
@@ -89,6 +102,7 @@ export function getServerConfig(): ServerConfig {
     workspaceUploadStorageRoot:
       process.env.WORKSPACE_UPLOAD_STORAGE_ROOT?.trim() || DEFAULT_WORKSPACE_UPLOAD_STORAGE_RELATIVE_ROOT,
     arExportStorageRoot: process.env.AR_EXPORT_STORAGE_ROOT?.trim() || DEFAULT_AR_EXPORT_STORAGE_RELATIVE_ROOT,
+    blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN?.trim() || undefined,
   };
 
   return cachedConfig;
