@@ -334,6 +334,58 @@ describe("useWorkspaceEditor", () => {
     expect(result.current.lights[0].position).toEqual({ x: 9, y: 9, z: 9 });
   });
 
+  it("loadWorkspace replaces the live scene and pushes exactly one history entry (AC-7, AC-10)", async () => {
+    const { result } = renderHook(() => useWorkspaceEditor());
+    await act(async () => {
+      await result.current.importFiles([makeGlbFile("a.glb", 1024)]);
+    });
+    act(() => result.current.addLight("point"));
+    const preLoadObjects = result.current.objects;
+    const preLoadLights = result.current.lights;
+    const historyBeforeLoad = result.current.canUndo;
+
+    const newObjects = [
+      {
+        id: "loaded-1",
+        source: { kind: "primitive" as const, shape: "cube" as const },
+        url: "",
+        transform: { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+        visible: true,
+        wireframe: false,
+      },
+    ];
+    const newLights: typeof preLoadLights = [];
+
+    act(() => result.current.loadWorkspace(newObjects, newLights));
+
+    expect(result.current.objects).toEqual(newObjects);
+    expect(result.current.lights).toEqual(newLights);
+    expect(result.current.canUndo).toBe(true);
+    expect(historyBeforeLoad).toBe(true); // sanity: history existed before load too
+
+    act(() => result.current.undo());
+
+    expect(result.current.objects).toEqual(preLoadObjects);
+    expect(result.current.lights).toEqual(preLoadLights);
+  });
+
+  it("redo re-applies the loaded scene after an undo (AC-11)", () => {
+    const { result } = renderHook(() => useWorkspaceEditor());
+    act(() => result.current.addLight("point"));
+    const preLoadLights = result.current.lights;
+
+    const newLights = [{ id: "loaded-light", type: "point" as const, color: "#ff0000", intensity: 5, castShadow: false, position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } }];
+
+    act(() => result.current.loadWorkspace([], newLights));
+    expect(result.current.lights).toEqual(newLights);
+
+    act(() => result.current.undo());
+    expect(result.current.lights).toEqual(preLoadLights);
+
+    act(() => result.current.redo());
+    expect(result.current.lights).toEqual(newLights);
+  });
+
   it("undoes renameLight (AC-19/NFR-3)", () => {
     const { result } = renderHook(() => useWorkspaceEditor());
     act(() => result.current.addLight("point"));

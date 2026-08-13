@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useLightingRig } from "@/components/features/workspace/useLightingRig";
 import { useWorkspaceObjects } from "@/components/features/workspace/useWorkspaceObjects";
+import type { LibraryAssetImport } from "@/components/features/workspace/useWorkspaceObjects";
 import type { LightSource, LightType } from "@/components/shared/types/lightSource";
 import type {
   ImportErrorView,
@@ -20,13 +21,16 @@ export interface UseWorkspaceEditorResult {
   importErrors: ImportErrorView[];
   importFiles: (files: File[]) => Promise<void>;
   importFromHistory: (jobId: string, url: string, fileName: string) => void;
+  /** Adds a Poly Haven library model. Returns the new object's id. */
+  importLibraryAsset: (asset: LibraryAssetImport) => string;
   select: (id: string | null) => void;
   updateTransform: (id: string, transform: Transform) => void;
   remove: (id: string) => void;
   duplicate: (id: string) => void;
   clear: () => void;
   dismissImportError: (id: string) => void;
-  addPrimitive: (shape: PrimitiveShapeType) => void;
+  /** Returns the new object's id, available synchronously to the caller. */
+  addPrimitive: (shape: PrimitiveShapeType) => string;
   updateMaterial: (id: string, patch: Partial<WorkspaceObjectMaterial>) => void;
   setVisible: (id: string, visible: boolean) => void;
   setWireframe: (id: string, wireframe: boolean) => void;
@@ -47,6 +51,11 @@ export interface UseWorkspaceEditorResult {
   canRedo: boolean;
   undo: () => void;
   redo: () => void;
+  /** Replaces the live scene with a loaded save's objects/lights, integrating
+   * with the same undo/redo history boundary every other mutating method
+   * uses (FR-9, AC-7/AC-10/AC-11) — a single `undo()` restores the pre-load
+   * scene. */
+  loadWorkspace: (objects: WorkspaceObject[], lights: LightSource[]) => void;
 }
 
 interface EditorSnapshot {
@@ -111,6 +120,14 @@ export function useWorkspaceEditor(): UseWorkspaceEditorResult {
     [recordSnapshot, workspaceObjects],
   );
 
+  const importLibraryAsset = useCallback(
+    (asset: LibraryAssetImport) => {
+      recordSnapshot();
+      return workspaceObjects.importLibraryAsset(asset);
+    },
+    [recordSnapshot, workspaceObjects],
+  );
+
   const updateTransform = useCallback(
     (id: string, transform: Transform) => {
       recordSnapshot();
@@ -143,7 +160,7 @@ export function useWorkspaceEditor(): UseWorkspaceEditorResult {
   const addPrimitive = useCallback(
     (shape: PrimitiveShapeType) => {
       recordSnapshot();
-      workspaceObjects.addPrimitive(shape);
+      return workspaceObjects.addPrimitive(shape);
     },
     [recordSnapshot, workspaceObjects],
   );
@@ -258,6 +275,15 @@ export function useWorkspaceEditor(): UseWorkspaceEditorResult {
     [workspaceObjects, lightingRig],
   );
 
+  const loadWorkspace = useCallback(
+    (objects: WorkspaceObject[], lights: LightSource[]) => {
+      recordSnapshot();
+      workspaceObjects.restoreObjects(objects);
+      lightingRig.restoreLights(lights);
+    },
+    [recordSnapshot, workspaceObjects, lightingRig],
+  );
+
   const undo = useCallback(() => {
     setHistory((prevHistory) => {
       if (prevHistory.length === 0) return prevHistory;
@@ -288,6 +314,7 @@ export function useWorkspaceEditor(): UseWorkspaceEditorResult {
     importErrors: workspaceObjects.importErrors,
     importFiles,
     importFromHistory,
+    importLibraryAsset,
     select,
     updateTransform,
     remove,
@@ -313,5 +340,6 @@ export function useWorkspaceEditor(): UseWorkspaceEditorResult {
     canRedo: future.length > 0,
     undo,
     redo,
+    loadWorkspace,
   };
 }

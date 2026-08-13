@@ -1,0 +1,31 @@
+erDiagram
+    %% New entity for this run (FR-1..FR-13). objects_json/lights_json are
+    %% each a JSON array — see 04-lld.md §1/§3 for the element shape
+    %% (WorkspaceSaveObjectSnapshot / WorkspaceSaveLightSnapshot). No FK to
+    %% generation_jobs: a saved object's "history" source kind carries a
+    %% jobId *value* inside objects_json, not a relational foreign key,
+    %% mirroring how the live WorkspaceObject already references a job today
+    %% (loosely coupled, A-4 — a save is a point-in-time snapshot, not a
+    %% live join).
+    WORKSPACE_SAVES {
+        TEXT id PK
+        TEXT name "1..50 chars, not globally unique (FR-11)"
+        TEXT objects_json "JSON array of WorkspaceSaveObjectSnapshot"
+        TEXT lights_json "JSON array of WorkspaceSaveLightSnapshot"
+        TEXT created_at "ISO 8601, indexed DESC (FR-4)"
+    }
+
+    %% Existing entity, unchanged by this run (NFR-2/AC-16) — shown only for
+    %% context to make explicit that no relationship/FK is introduced.
+    GENERATION_JOBS {
+        TEXT id PK
+        TEXT status
+        TEXT source_image_name
+        TEXT source_image_mime_type
+        INTEGER source_image_size_bytes
+        TEXT glb_file_path
+        INTEGER glb_size_bytes
+        TEXT error_message
+        TEXT created_at
+        TEXT updated_at
+    }

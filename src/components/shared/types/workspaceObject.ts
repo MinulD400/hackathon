@@ -11,6 +11,10 @@ export type PrimitiveShapeType =
 export type WorkspaceObjectSource =
   | { kind: "upload"; fileName: string }
   | { kind: "history"; jobId: string; fileName: string }
+  /** A CC0 model imported from the Poly Haven library. `fileName` carries the
+   * display name so the non-primitive branches that read `source.fileName`
+   * (object list labels, export naming) keep working unchanged. */
+  | { kind: "library"; assetId: string; fileName: string; authors: Record<string, string> }
   | { kind: "primitive"; shape: PrimitiveShapeType };
 
 export interface Vec3Tuple {
