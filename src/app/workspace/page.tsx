@@ -9,6 +9,7 @@ import { useWorkspaceEditor } from "@/components/features/workspace/useWorkspace
 import { AccordionSection } from "@/components/molecules/AccordionSection";
 import { WorkspaceHistoryControls } from "@/components/molecules/WorkspaceHistoryControls";
 import { WorkspaceLightListItem } from "@/components/molecules/WorkspaceLightListItem";
+import { WorkspaceExportControls } from "@/components/organisms/WorkspaceExportControls";
 import { WorkspaceGlobalToolPanel } from "@/components/organisms/WorkspaceGlobalToolPanel";
 import { WorkspaceObjectList } from "@/components/organisms/WorkspaceObjectList";
 import { WorkspaceSaveLoadPanel } from "@/components/organisms/WorkspaceSaveLoadPanel";
@@ -37,6 +38,10 @@ export default function WorkspacePage() {
   // is additive-only; extending that shared type is out of scope for this
   // plan). Defaults expanded, same convention as every other section.
   const [isSaveLoadExpanded, setIsSaveLoadExpanded] = useState(true);
+  // Export accordion: always-visible so users can export regardless of what
+  // is or isn't selected (previously inaccessible when an object was selected
+  // because it only lived inside WorkspaceGlobalToolPanel).
+  const [isExportExpanded, setIsExportExpanded] = useState(true);
 
   const editor = useWorkspaceEditor();
   const {
@@ -221,6 +226,15 @@ export default function WorkspacePage() {
                 onOpenAiAssistant={() => setIsConversationOpen(true)}
               />
             )}
+            {/* Export: always-visible, pinned to the bottom of the sidebar so
+             * it is reachable regardless of what is or isn't selected. */}
+            <AccordionSection
+              title="Export"
+              expanded={isExportExpanded}
+              onToggle={() => setIsExportExpanded((prev) => !prev)}
+            >
+              <WorkspaceExportControls objects={objects} selectedObject={selectedObject} />
+            </AccordionSection>
           </>
         }
       />

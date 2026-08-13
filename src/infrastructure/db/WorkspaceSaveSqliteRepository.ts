@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type { WorkspaceSaveRepository } from "@/application/workspace-save/ports/WorkspaceSaveRepository";
 import { WorkspaceSave, type WorkspaceSaveProps } from "@/domain/workspace-save/WorkspaceSave";
@@ -24,48 +24,53 @@ function rowToProps(row: WorkspaceSaveRow): WorkspaceSaveProps {
 }
 
 /**
- * Concrete `WorkspaceSaveRepository` implementation backed by `better-sqlite3`.
- * The only place in the codebase that imports `better-sqlite3` for reading/
- * writing `workspace_saves` rows (NFR-1) — Application/API code depends only
- * on the `WorkspaceSaveRepository` port. `objects`/`lights` are JSON-encoded
- * at the row boundary only, same pattern `GenerationJobSqliteRepository`
- * applies to its scalar columns.
+ * Concrete `WorkspaceSaveRepository` implementation backed by `@libsql/client`
+ * (Turso remote SQLite). All methods are fully async, matching the libsql
+ * client's promise-based API. `objects`/`lights` are JSON-encoded at the row
+ * boundary only. Application/API code depends only on the
+ * `WorkspaceSaveRepository` port — no libsql import leaks outside this file.
  */
 export class WorkspaceSaveSqliteRepository implements WorkspaceSaveRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly db: Client) {}
 
   async create(save: WorkspaceSave): Promise<void> {
     const props = save.toProps();
-    this.db
-      .prepare(
-        `INSERT INTO workspace_saves (id, name, objects_json, lights_json, created_at)
-         VALUES (@id, @name, @objectsJson, @lightsJson, @createdAt)`,
-      )
-      .run({
-        id: props.id,
-        name: props.name,
-        objectsJson: JSON.stringify(props.objects),
-        lightsJson: JSON.stringify(props.lights),
-        createdAt: props.createdAt.toISOString(),
-      });
+    await this.db.execute({
+      sql: `INSERT INTO workspace_saves (id, name, objects_json, lights_json, created_at)
+            VALUES (?, ?, ?, ?, ?)`,
+      args: [
+        props.id,
+        props.name,
+        JSON.stringify(props.objects),
+        JSON.stringify(props.lights),
+        props.createdAt.toISOString(),
+      ],
+    });
   }
 
   async findById(id: string): Promise<WorkspaceSave | null> {
-    const row = this.db.prepare("SELECT * FROM workspace_saves WHERE id = ?").get(id) as
-      | WorkspaceSaveRow
-      | undefined;
+    const result = await this.db.execute({
+      sql: "SELECT * FROM workspace_saves WHERE id = ?",
+      args: [id],
+    });
+    const row = result.rows[0] as unknown as WorkspaceSaveRow | undefined;
     if (!row) return null;
     return WorkspaceSave.fromProps(rowToProps(row));
   }
 
   async listAll(): Promise<WorkspaceSave[]> {
-    const rows = this.db
-      .prepare("SELECT * FROM workspace_saves ORDER BY created_at DESC")
-      .all() as WorkspaceSaveRow[];
-    return rows.map((row) => WorkspaceSave.fromProps(rowToProps(row)));
+    const result = await this.db.execute(
+      "SELECT * FROM workspace_saves ORDER BY created_at DESC",
+    );
+    return (result.rows as unknown as WorkspaceSaveRow[]).map((row) =>
+      WorkspaceSave.fromProps(rowToProps(row)),
+    );
   }
 
   async delete(id: string): Promise<void> {
-    this.db.prepare("DELETE FROM workspace_saves WHERE id = ?").run(id);
+    await this.db.execute({
+      sql: "DELETE FROM workspace_saves WHERE id = ?",
+      args: [id],
+    });
   }
 }

@@ -42,7 +42,7 @@ describe("GET /api/jobs/{id}", () => {
   });
 
   it("returns a job's current status/details (AC-7)", async () => {
-    const repository = new GenerationJobSqliteRepository(getDb());
+    const repository = new GenerationJobSqliteRepository(await getDb());
     await repository.create(
       GenerationJob.createProcessing({
         id: "job-1",

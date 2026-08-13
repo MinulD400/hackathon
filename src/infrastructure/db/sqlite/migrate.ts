@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 const MIGRATIONS_DIR = path.join(process.cwd(), "src", "infrastructure", "db", "migrations");
 const MIGRATION_FILE_PATTERN = /^(\d+)_.*\.sql$/;
@@ -25,36 +25,59 @@ function listMigrationFiles(migrationsDir: string): MigrationFile[] {
 }
 
 /**
- * Hand-rolled, versioned SQL migration runner (FR-13/AC-16 — no ORM, see
- * `02-plan.md` §4 rejected alternatives). Tracks applied versions in a
- * `schema_migrations` bookkeeping table (intentionally not part of the domain
- * ERD, see `06-erd.mmd`'s header note), and applies each pending `.sql` file
- * inside its own transaction. Idempotent: re-running against an already
- * up-to-date database applies nothing.
+ * Async migration runner for `@libsql/client` (Turso). Tracks applied
+ * versions in a `schema_migrations` bookkeeping table and applies each
+ * pending `.sql` file. Idempotent: re-running against an already up-to-date
+ * database applies nothing. Mirrors the previous `better-sqlite3` runner's
+ * contract, updated to use the async libsql API.
  */
-export function runMigrations(db: Database.Database, migrationsDir: string = MIGRATIONS_DIR): void {
-  db.exec(`
+export async function runMigrations(
+  db: Client,
+  migrationsDir: string = MIGRATIONS_DIR,
+): Promise<void> {
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version INTEGER PRIMARY KEY,
       applied_at TEXT NOT NULL
-    );
+    )
   `);
 
+  const result = await db.execute("SELECT version FROM schema_migrations");
   const appliedVersions = new Set(
-    db.prepare("SELECT version FROM schema_migrations").all().map((row) => (row as { version: number }).version),
+    result.rows.map((row) => row.version as number),
   );
 
-  const pending = listMigrationFiles(migrationsDir).filter((file) => !appliedVersions.has(file.version));
+  const pending = listMigrationFiles(migrationsDir).filter(
+    (file) => !appliedVersions.has(file.version),
+  );
 
   for (const migration of pending) {
     const sql = fs.readFileSync(migration.fullPath, "utf8");
-    const applyMigration = db.transaction(() => {
-      db.exec(sql);
-      db.prepare("INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(
-        migration.version,
-        new Date().toISOString(),
-      );
-    });
-    applyMigration();
+    // Bugfix: comment lines must be stripped BEFORE splitting on `;`, not
+    // filtered out after — every migration file opens with a multi-line `--`
+    // comment block with no `;` of its own, so a naive split-then-filter
+    // merges those comment lines with the first real statement into one
+    // chunk (e.g. "-- comment...\nCREATE TABLE ..."), which then gets
+    // silently dropped entirely because the merged chunk *starts* with
+    // `--` — the table is never created, yet `schema_migrations` still
+    // records the version as applied, so it's never retried either.
+    const statements = sql
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("--"))
+      .join("\n")
+      .split(";")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    await db.batch(
+      [
+        ...statements.map((stmt) => ({ sql: stmt, args: [] as never[] })),
+        {
+          sql: "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
+          args: [migration.version, new Date().toISOString()],
+        },
+      ],
+      "write",
+    );
   }
 }

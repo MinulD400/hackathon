@@ -39,12 +39,15 @@ function renderPanel() {
 }
 
 describe("WorkspaceGlobalToolPanel", () => {
-  it("renders exactly the scene-level sections (Shapes, Snapping, Export), not Objects/Lights/Materials (AC-17)", () => {
+  it("renders exactly the scene-level sections (Shapes, Snapping), not Objects/Lights/Materials/Export (AC-17)", () => {
     renderPanel();
 
-    for (const title of ["Shapes", "Snapping", "Export"]) {
+    for (const title of ["Shapes", "Snapping"]) {
       expect(screen.getByRole("button", { name: title })).toBeInTheDocument();
     }
+    // Export moved to `workspace/page.tsx` as an always-visible section
+    // (reachable regardless of selection), so it is no longer rendered here.
+    expect(screen.queryByRole("button", { name: "Export" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Objects" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Lights" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Materials" })).not.toBeInTheDocument();

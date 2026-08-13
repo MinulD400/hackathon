@@ -856,7 +856,7 @@ export function WorkspaceViewer({
           ))}
           {selectedGroup ? (
             <TransformControls
-              key={activeSelectedId}
+              key={selectedId ?? selectedLightId ?? undefined}
               object={selectedGroup}
               mode={effectiveGizmoMode}
               translationSnap={

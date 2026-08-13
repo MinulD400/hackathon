@@ -326,6 +326,7 @@ export function useWorkspaceEditor(): UseWorkspaceEditorResult {
     importFiles,
     importFromHistory,
     importLibraryAsset,
+    replaceObjectSource,
     select,
     updateTransform,
     remove,

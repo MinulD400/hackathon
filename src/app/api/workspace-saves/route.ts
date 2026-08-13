@@ -15,7 +15,7 @@ import { WorkspaceUploadFileSystemStorage } from "@/infrastructure/storage/Works
 /** `GET /api/workspace-saves` — saved-workspace list, newest first (FR-3, AC-4). */
 export async function GET() {
   try {
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     const listWorkspaceSaves = new ListWorkspaceSaves(repository);
     const items = await listWorkspaceSaves.execute();
     return NextResponse.json({ items, total: items.length });
@@ -37,7 +37,7 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   const config = getServerConfig();
-  const repository = new WorkspaceSaveSqliteRepository(getDb());
+  const repository = new WorkspaceSaveSqliteRepository(await getDb());
   const storage = new WorkspaceUploadFileSystemStorage(config.workspaceUploadStorageRoot);
 
   try {

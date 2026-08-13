@@ -27,7 +27,7 @@ function readOptionalStringField(formData: FormData, key: string): string | unde
  */
 export async function POST(request: NextRequest) {
   const config = getServerConfig();
-  const repository = new GenerationJobSqliteRepository(getDb());
+  const repository = new GenerationJobSqliteRepository(await getDb());
   const glbGenerationService = new TrellisGradioClient({
     spaceId: config.hfSpaceId,
     hfToken: config.hfToken,

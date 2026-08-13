@@ -15,7 +15,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   try {
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     const getWorkspaceSave = new GetWorkspaceSave(repository);
     const resolveUploadUrl = (saveId: string, objectId: string) =>
       `/api/workspace-saves/${saveId}/objects/${objectId}/file`;
@@ -39,7 +39,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   try {
     const config = getServerConfig();
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     const storage = new WorkspaceUploadFileSystemStorage(config.workspaceUploadStorageRoot);
     const deleteWorkspaceSave = new DeleteWorkspaceSave(repository, storage);
     await deleteWorkspaceSave.execute(id);

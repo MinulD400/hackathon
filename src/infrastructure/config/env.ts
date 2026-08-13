@@ -12,7 +12,9 @@ import path from "node:path";
  * - `HF_TOKEN`           (optional; only needed if the Space is gated/private)
  * - `TRELLIS_TIMEOUT_MS` (optional, default: 180000)
  * - `MAX_UPLOAD_BYTES`   (optional, default: 20971520 = 20 MB)
- * - `SQLITE_DB_PATH`     (optional, default: "data/db/image2glb.sqlite")
+ * - `SQLITE_DB_PATH`     (optional, default: "data/db/image2glb.sqlite" — only used by local/test fallback)
+ * - `TURSO_DB_URL`       (required for production — e.g. "libsql://db-xxx.turso.io")
+ * - `TURSO_DB_AUTH_TOKEN` (required for production Turso auth)
  * - `GLB_STORAGE_ROOT`   (optional, default: "data/glb-storage")
  * - `POLY_PIZZA_API_KEY` (optional, no default — Poly Pizza is skipped as an asset source
  *                         when unset, and the search falls back to Poly Haven alone)
@@ -25,6 +27,10 @@ export interface ServerConfig {
   trellisTimeoutMs: number;
   maxUploadBytes: number;
   sqliteFilePath: string;
+  /** Turso remote libsql URL — e.g. "libsql://db-xxx.aws-region.turso.io" */
+  tursoDbUrl: string;
+  /** Turso auth token (JWT). Required when `tursoDbUrl` is set. */
+  tursoDbAuthToken: string;
   glbStorageRoot: string;
   /** Optional. When unset, `PolyPizzaLibraryProvider` is not added to the asset-search
    * provider list — this is the only field with no default value, because "absent" is
@@ -76,6 +82,8 @@ export function getServerConfig(): ServerConfig {
     trellisTimeoutMs: parsePositiveInt(process.env.TRELLIS_TIMEOUT_MS, DEFAULT_TRELLIS_TIMEOUT_MS),
     maxUploadBytes: parsePositiveInt(process.env.MAX_UPLOAD_BYTES, DEFAULT_MAX_UPLOAD_BYTES),
     sqliteFilePath: process.env.SQLITE_DB_PATH?.trim() || DEFAULT_SQLITE_RELATIVE_PATH,
+    tursoDbUrl: process.env.TURSO_DB_URL?.trim() || "",
+    tursoDbAuthToken: process.env.TURSO_DB_AUTH_TOKEN?.trim() || "",
     glbStorageRoot: process.env.GLB_STORAGE_ROOT?.trim() || DEFAULT_GLB_STORAGE_RELATIVE_ROOT,
     polyPizzaApiKey: process.env.POLY_PIZZA_API_KEY?.trim() || undefined,
     workspaceUploadStorageRoot:

@@ -47,7 +47,7 @@ describe("GET /api/workspace-saves/{id}/objects/{objectId}/file", () => {
   });
 
   it("returns 404 NOT_FOUND for an unknown objectId within a save that exists", async () => {
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     await repository.create(
       WorkspaceSave.createNew({ id: "save-1", name: "Scene", objects: [], lights: [], now: new Date() }),
     );
@@ -59,7 +59,7 @@ describe("GET /api/workspace-saves/{id}/objects/{objectId}/file", () => {
   });
 
   it("returns 404 for a non-upload-kind object", async () => {
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     await repository.create(
       WorkspaceSave.createNew({
         id: "save-2",
@@ -77,7 +77,7 @@ describe("GET /api/workspace-saves/{id}/objects/{objectId}/file", () => {
   });
 
   it("streams the stored bytes with Content-Type model/gltf-binary for a valid upload object (AC-6)", async () => {
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     const storage = new WorkspaceUploadFileSystemStorage(workspaceUploadStorageRoot);
     const { filePath } = await storage.save("save-3", "o-upload", Buffer.from("glb-bytes"));
 
@@ -102,7 +102,7 @@ describe("GET /api/workspace-saves/{id}/objects/{objectId}/file", () => {
   });
 
   it("returns 404 when the DB references a filePath that no longer exists on disk", async () => {
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     await repository.create(
       WorkspaceSave.createNew({
         id: "save-4",

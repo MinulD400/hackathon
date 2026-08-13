@@ -78,7 +78,10 @@ describe("/workspace page", () => {
     expect(screen.getByRole("button", { name: "Materials" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Transform gizmo mode" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Shapes" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Export" })).not.toBeInTheDocument();
+    // Export is always-visible regardless of selection (bugfix: previously
+    // lived only inside the selection-dependent global panel, so it was
+    // unreachable whenever an object was selected).
+    expect(screen.getByRole("button", { name: "Export" })).toBeInTheDocument();
   });
 
   it("shows the light-specific tool set (Lights) when a light is selected, not the global set (AC-19)", async () => {

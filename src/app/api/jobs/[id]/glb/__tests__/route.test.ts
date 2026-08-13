@@ -41,7 +41,7 @@ describe("GET /api/jobs/{id}/glb", () => {
   });
 
   it("returns 409 GLB_NOT_READY while the job is still processing (LLD edge case #5)", async () => {
-    const repository = new GenerationJobSqliteRepository(getDb());
+    const repository = new GenerationJobSqliteRepository(await getDb());
     await repository.create(
       GenerationJob.createProcessing({
         id: "job-processing",
@@ -63,7 +63,7 @@ describe("GET /api/jobs/{id}/glb", () => {
   });
 
   it("returns 409 GLB_NOT_READY with a failure-specific message for a failed job", async () => {
-    const repository = new GenerationJobSqliteRepository(getDb());
+    const repository = new GenerationJobSqliteRepository(await getDb());
     const job = GenerationJob.createProcessing({
       id: "job-failed",
       sourceImageName: "photo.png",
@@ -84,7 +84,7 @@ describe("GET /api/jobs/{id}/glb", () => {
   });
 
   it("streams the GLB binary for a completed job with Content-Type model/gltf-binary (AC-5, AC-7)", async () => {
-    const repository = new GenerationJobSqliteRepository(getDb());
+    const repository = new GenerationJobSqliteRepository(await getDb());
     const storage = new GlbFileSystemStorage(glbStorageRoot);
     const { filePath, sizeBytes } = await storage.save("job-complete", Buffer.from("glb-bytes"));
 
@@ -110,7 +110,7 @@ describe("GET /api/jobs/{id}/glb", () => {
   });
 
   it("sets Content-Disposition: attachment when ?download=true (AC-8)", async () => {
-    const repository = new GenerationJobSqliteRepository(getDb());
+    const repository = new GenerationJobSqliteRepository(await getDb());
     const storage = new GlbFileSystemStorage(glbStorageRoot);
     const { filePath, sizeBytes } = await storage.save("job-download", Buffer.from("glb-bytes"));
 
@@ -133,7 +133,7 @@ describe("GET /api/jobs/{id}/glb", () => {
   });
 
   it("returns 404 when the DB row says complete but the GLB file is missing from disk (LLD edge case #9)", async () => {
-    const repository = new GenerationJobSqliteRepository(getDb());
+    const repository = new GenerationJobSqliteRepository(await getDb());
     const job = GenerationJob.createProcessing({
       id: "job-missing-file",
       sourceImageName: "photo.png",

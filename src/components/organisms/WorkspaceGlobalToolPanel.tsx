@@ -4,7 +4,6 @@ import type { SectionId } from "@/components/features/workspace/useAccordionStat
 import type { UseViewerSettingsResult } from "@/components/features/workspace/useViewerSettings";
 import { AccordionSection } from "@/components/molecules/AccordionSection";
 import { WorkspaceAddLightControl } from "@/components/molecules/WorkspaceAddLightControl";
-import { WorkspaceExportControls } from "@/components/organisms/WorkspaceExportControls";
 import { WorkspaceShapePanel } from "@/components/organisms/WorkspaceShapePanel";
 import { WorkspaceSnappingPanel } from "@/components/organisms/WorkspaceSnappingPanel";
 import { WorkspaceViewerSettingsPanel } from "@/components/organisms/WorkspaceViewerSettingsPanel";
@@ -106,9 +105,6 @@ export function WorkspaceGlobalToolPanel({
           onSetGridCellSize={viewerSettings.setGridCellSize}
           onSetGridSectionSize={viewerSettings.setGridSectionSize}
         />
-      </AccordionSection>
-      <AccordionSection title="Export" expanded={expanded.export} onToggle={() => onToggleSection("export")}>
-        <WorkspaceExportControls objects={objects} selectedObject={selectedObject} />
       </AccordionSection>
     </>
   );

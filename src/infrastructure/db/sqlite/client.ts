@@ -1,34 +1,30 @@
-import fs from "node:fs";
-import path from "node:path";
-
-import Database from "better-sqlite3";
+import { createClient, type Client } from "@libsql/client";
 
 import { getServerConfig } from "@/infrastructure/config/env";
 import { runMigrations } from "@/infrastructure/db/sqlite/migrate";
 
-let dbInstance: Database.Database | null = null;
+let dbInstance: Client | null = null;
 
 /**
- * Returns the process-wide `better-sqlite3` connection singleton, creating the
- * containing directory and running pending migrations on first acquisition
- * (FR-13). Safe to call repeatedly — subsequent calls return the same instance
- * without re-running migrations (idempotent runner, but also skipped here via
- * the module-level cache).
+ * Returns the process-wide `@libsql/client` connection singleton pointed at
+ * the Turso remote database, running pending migrations on first acquisition.
+ * Falls back to a local file path via `SQLITE_DB_PATH` if `TURSO_DB_URL` is
+ * not set (e.g. local dev without Turso credentials).
  */
-export function getDb(): Database.Database {
+export async function getDb(): Promise<Client> {
   if (dbInstance) return dbInstance;
 
-  const { sqliteFilePath } = getServerConfig();
-  const dbDir = path.dirname(sqliteFilePath);
-  fs.mkdirSync(dbDir, { recursive: true });
+  const { tursoDbUrl, tursoDbAuthToken, sqliteFilePath } = getServerConfig();
 
-  const db = new Database(sqliteFilePath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
+  const client = createClient(
+    tursoDbUrl
+      ? { url: tursoDbUrl, authToken: tursoDbAuthToken }
+      : { url: `file:${sqliteFilePath}` },
+  );
 
-  runMigrations(db);
+  await runMigrations(client);
 
-  dbInstance = db;
+  dbInstance = client;
   return dbInstance;
 }
 

@@ -10,7 +10,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   try {
-    const repository = new GenerationJobSqliteRepository(getDb());
+    const repository = new GenerationJobSqliteRepository(await getDb());
     const getGenerationJob = new GetGenerationJob(repository);
     const job = await getGenerationJob.execute(id);
     return NextResponse.json(job);

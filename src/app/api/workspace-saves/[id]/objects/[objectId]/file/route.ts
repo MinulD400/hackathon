@@ -20,7 +20,7 @@ export async function GET(
 ) {
   const { id, objectId } = await params;
   const config = getServerConfig();
-  const repository = new WorkspaceSaveSqliteRepository(getDb());
+  const repository = new WorkspaceSaveSqliteRepository(await getDb());
   const storage = new WorkspaceUploadFileSystemStorage(config.workspaceUploadStorageRoot);
 
   try {

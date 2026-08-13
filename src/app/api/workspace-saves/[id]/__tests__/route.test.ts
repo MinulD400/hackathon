@@ -56,7 +56,7 @@ describe("GET/DELETE /api/workspace-saves/{id}", () => {
   });
 
   it("returns the save's detail with an upload object's url rewritten to the file route (AC-5, AC-6)", async () => {
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     const storage = new WorkspaceUploadFileSystemStorage(workspaceUploadStorageRoot);
     await storage.save("save-1", "o-upload", Buffer.from("bytes"));
 
@@ -82,7 +82,7 @@ describe("GET/DELETE /api/workspace-saves/{id}", () => {
   });
 
   it("returns a library object's persisted url as-is, regardless of source provider (bugfix: Poly Pizza has no by-id reconstruction)", async () => {
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     await repository.create(
       WorkspaceSave.createNew({
         id: "save-library",
@@ -117,7 +117,7 @@ describe("GET/DELETE /api/workspace-saves/{id}", () => {
   });
 
   it("falls back to an empty url for a pre-fix library object with no persisted url and a non-Poly-Haven id", async () => {
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     await repository.create(
       WorkspaceSave.createNew({
         id: "save-library-legacy",
@@ -139,7 +139,7 @@ describe("GET/DELETE /api/workspace-saves/{id}", () => {
   });
 
   it("DELETE removes the save so a subsequent GET 404s (AC-5, AC-12, AC-14)", async () => {
-    const repository = new WorkspaceSaveSqliteRepository(getDb());
+    const repository = new WorkspaceSaveSqliteRepository(await getDb());
     await repository.create(
       WorkspaceSave.createNew({ id: "save-2", name: "To Delete", objects: [], lights: [], now: new Date() }),
     );

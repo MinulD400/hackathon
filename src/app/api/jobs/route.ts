@@ -7,7 +7,7 @@ import { GenerationJobSqliteRepository } from "@/infrastructure/db/GenerationJob
 /** `GET /api/jobs` — history list, newest first (FR-7, AC-6). */
 export async function GET() {
   try {
-    const repository = new GenerationJobSqliteRepository(getDb());
+    const repository = new GenerationJobSqliteRepository(await getDb());
     const listGenerationJobs = new ListGenerationJobs(repository);
     const items = await listGenerationJobs.execute();
     return NextResponse.json({ items, total: items.length });

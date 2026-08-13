@@ -40,7 +40,7 @@ describe("GET /api/jobs", () => {
   });
 
   it("lists jobs newest first, sourced from the SQLite-backed store (AC-6)", async () => {
-    const repository = new GenerationJobSqliteRepository(getDb());
+    const repository = new GenerationJobSqliteRepository(await getDb());
     await repository.create(
       GenerationJob.createProcessing({
         id: "job-older",

@@ -17,7 +17,7 @@ import { GlbFileSystemStorage } from "@/infrastructure/storage/GlbFileSystemStor
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const config = getServerConfig();
-  const repository = new GenerationJobSqliteRepository(getDb());
+  const repository = new GenerationJobSqliteRepository(await getDb());
   const glbFileStorage = new GlbFileSystemStorage(config.glbStorageRoot);
 
   try {
