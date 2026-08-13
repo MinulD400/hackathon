@@ -20,6 +20,7 @@ function renderList(overrides: Partial<Parameters<typeof WorkspaceObjectList>[0]
   return render(
     <WorkspaceObjectList
       objects={objects}
+      lights={[]}
       selectedId={null}
       onSelect={vi.fn()}
       onRemove={vi.fn()}
@@ -29,6 +30,9 @@ function renderList(overrides: Partial<Parameters<typeof WorkspaceObjectList>[0]
       onSetWireframe={vi.fn()}
       onResetTransform={vi.fn()}
       onRename={vi.fn()}
+      importErrors={[]}
+      onFilesSelected={vi.fn()}
+      onDismissError={vi.fn()}
       {...overrides}
     />,
   );
@@ -37,8 +41,8 @@ function renderList(overrides: Partial<Parameters<typeof WorkspaceObjectList>[0]
 describe("WorkspaceObjectList", () => {
   it("shows an empty state and a disabled clear button when there are no objects", () => {
     renderList({ objects: [] });
-    expect(screen.getByText("No objects imported yet.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Clear workspace" })).toBeDisabled();
+    expect(screen.getByText("No objects in scene")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear" })).toBeDisabled();
   });
 
   it("removes only the targeted object, leaving others present (AC-11)", async () => {
@@ -57,7 +61,7 @@ describe("WorkspaceObjectList", () => {
     const user = userEvent.setup();
     renderList({ onClear });
 
-    await user.click(screen.getByRole("button", { name: "Clear workspace" }));
+    await user.click(screen.getByRole("button", { name: "Clear" }));
 
     expect(onClear).toHaveBeenCalled();
   });

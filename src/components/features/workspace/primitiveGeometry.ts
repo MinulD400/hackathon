@@ -1,4 +1,16 @@
-import { BoxGeometry, BufferGeometry, ConeGeometry, CylinderGeometry, PlaneGeometry, SphereGeometry, TorusGeometry } from "three";
+import {
+  BoxGeometry,
+  BufferGeometry,
+  ConeGeometry,
+  CylinderGeometry,
+  DodecahedronGeometry,
+  IcosahedronGeometry,
+  OctahedronGeometry,
+  PlaneGeometry,
+  SphereGeometry,
+  TetrahedronGeometry,
+  TorusGeometry,
+} from "three";
 
 import type { PrimitiveShapeType } from "@/components/shared/types/workspaceObject";
 
@@ -23,6 +35,14 @@ export function createPrimitiveGeometry(shape: PrimitiveShapeType): BufferGeomet
       return new ConeGeometry(0.5, 1, 32);
     case "torus":
       return new TorusGeometry(0.5, 0.2, 16, 32);
+    case "dodecahedron":
+      return new DodecahedronGeometry(0.8, 0);
+    case "tetrahedron":
+      return new TetrahedronGeometry(0.8, 0);
+    case "icosahedron":
+      return new IcosahedronGeometry(0.6, 2);
+    case "octahedron":
+      return new OctahedronGeometry(0.8, 0);
     default: {
       const exhaustiveCheck: never = shape;
       throw new Error(`Unknown primitive shape: ${String(exhaustiveCheck)}`);
