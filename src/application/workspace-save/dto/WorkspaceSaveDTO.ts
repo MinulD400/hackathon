@@ -41,6 +41,17 @@ export interface WorkspaceSaveDetailDTO {
   lights: WorkspaceSaveLightSnapshot[];
 }
 
+/** `library` source ids are namespaced as `<provider>:<slug>` in the shared
+ * candidate pool (see `PolyHavenLibraryProvider`/`PolyPizzaLibraryProvider`).
+ * Only Poly Haven assets are rebuildable from just that id — the `/gltf`
+ * route takes the bare, unprefixed slug and re-derives everything else from
+ * Poly Haven's API. Poly Pizza has no get-by-id endpoint (its `resolveAsset`
+ * only serves from an instance-scoped cache of the search that found it), so
+ * a Poly Pizza asset's CDN url can't be reconstructed after the fact from its
+ * id alone; such objects are left without a durable url here rather than
+ * built into a request that can never succeed. */
+const POLYHAVEN_PREFIX = "polyhaven:";
+
 /** Resolves the fetchable `url` for a single saved object's source kind
  * (FR-6/AC-6): `upload` objects resolve to the dedicated file-streaming
  * route via the injected callback; `history`/`library` objects rebuild their
@@ -58,7 +69,9 @@ function resolveObjectUrl(
     case "history":
       return `/api/jobs/${source.jobId}/glb`;
     case "library":
-      return `/api/assets/${source.assetId}/gltf`;
+      return source.assetId.startsWith(POLYHAVEN_PREFIX)
+        ? `/api/assets/${source.assetId.slice(POLYHAVEN_PREFIX.length)}/gltf`
+        : "";
     case "primitive":
       return "";
   }

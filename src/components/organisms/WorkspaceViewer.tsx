@@ -466,7 +466,15 @@ export function WorkspaceViewer({
 
   const isLightSelected = Boolean(selectedLightId);
   const activeSelectedId = isLightSelected ? selectedLightId : selectedId;
-  const selectedGroup = activeSelectedId ? groups[activeSelectedId] ?? null : null;
+  const candidateGroup = activeSelectedId ? groups[activeSelectedId] ?? null : null;
+  // `groups` is React state, so it can briefly hold a `Group` instance that
+  // has already been removed from the scene graph (deletion/undo, or a
+  // Suspense fallback swapping for the real mesh) — one commit before its
+  // `registerRef(id, null)` cleanup runs. Rendering `TransformControls`
+  // against that stale, detached object is what throws "The attached 3D
+  // object must be a part of the scene graph", so only bind once the group
+  // is actually attached (has a `parent`).
+  const selectedGroup = candidateGroup?.parent ? candidateGroup : null;
   // FR-5: lights use the same gizmo-mode switcher/state as objects — no
   // hard-locked translate-only mode (rotate/scale are offered for parity even
   // though only position/target commit for a light today, per FR-5's scope
@@ -624,6 +632,7 @@ export function WorkspaceViewer({
           ))}
           {selectedGroup ? (
             <TransformControls
+              key={activeSelectedId}
               object={selectedGroup}
               mode={effectiveGizmoMode}
               translationSnap={snapConfig.translate.enabled ? snapConfig.translate.step : null}
